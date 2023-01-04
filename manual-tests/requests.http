@@ -3,11 +3,13 @@ Content-Type: application/json
 
 {
   "method": "createRoom",
+  "params": {"name":  "JohnDoe"},
   "id":"5555"
 }
 
 > {%
-client.global.set("roomKey", response.body.result.key)
+client.global.set("roomKey", response.body.result.roomKey)
+client.global.set("playerKey", response.body.result.playerKey)
  %}
 
 ###
@@ -22,7 +24,7 @@ Content-Type: application/json
 }
 
 > {%
-client.global.set("playerKey", response.body.result.key)
+client.global.set("playerKey", response.body.result.playerKey)
 %}
 
 ###

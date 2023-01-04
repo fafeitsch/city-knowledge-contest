@@ -52,8 +52,13 @@ type Options struct {
 	Random *rand.Rand
 }
 
+type createRoomRequest struct {
+	Name string `json:"name"`
+}
+
 type createRoomResponse struct {
-	Key string `json:"key"`
+	RoomKey   string `json:"roomKey"`
+	PlayerKey string `json:"playerKey"`
 }
 
 type joinRequest struct {
@@ -62,16 +67,19 @@ type joinRequest struct {
 }
 
 type joinResponse struct {
-	Name string `json:"name"`
-	Key  string `json:"key"`
+	Name      string `json:"name"`
+	PlayerKey string `json:"playerKey"`
 }
 
 func HandleFunc(options Options) http.HandlerFunc {
 	methods := map[string]Method{
 		"createRoom": func(message json.RawMessage) (json.RawMessage, error) {
+			var request createRoomRequest
+			_ = json.Unmarshal(message, &request)
 			room := contest.NewRoom()
+			player := room.Join(request.Name)
 			openRooms[room.Key] = room
-			response := createRoomResponse{Key: room.Key}
+			response := createRoomResponse{RoomKey: room.Key, PlayerKey: player.Key}
 			msg, _ := json.Marshal(response)
 			return msg, nil
 		},
@@ -84,8 +92,8 @@ func HandleFunc(options Options) http.HandlerFunc {
 			}
 			player := room.Join(request.Name)
 			response := joinResponse{
-				Name: player.Name,
-				Key:  player.Key,
+				Name:      player.Name,
+				PlayerKey: player.Key,
 			}
 			msg, _ := json.Marshal(response)
 			return msg, nil
