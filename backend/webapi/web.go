@@ -8,12 +8,10 @@ import (
 	"net/http"
 	"reflect"
 	"runtime/debug"
-	"strconv"
 	"strings"
-	"time"
 )
 
-var openRooms map[string]contest.Room = make(map[string]contest.Room)
+var openRooms = make(map[string]*contest.Room)
 
 type Request struct {
 	Jsonrpc string          `json:"jsonrpc"`
@@ -56,17 +54,37 @@ type createRoomResponse struct {
 	Key string `json:"key"`
 }
 
+type joinRequest struct {
+	Name    string `json:"name"`
+	RoomKey string `json:"roomKey"`
+}
+
+type joinResponse struct {
+	Name string `json:"name"`
+	Key  string `json:"key"`
+}
+
 func HandleFunc(options Options) http.HandlerFunc {
 	methods := map[string]Method{
 		"createRoom": func(message json.RawMessage) (json.RawMessage, error) {
-			id := options.Random.Intn(900_001) + 100_000
-			for _, ok := openRooms[strconv.Itoa(id)]; ok; {
-				id = options.Random.Intn(900_001) + 100_000
+			room := contest.NewRoom()
+			openRooms[room.Key] = room
+			response := createRoomResponse{Key: room.Key}
+			msg, _ := json.Marshal(response)
+			return msg, nil
+		},
+		"joinRoom": func(message json.RawMessage) (json.RawMessage, error) {
+			var request joinRequest
+			_ = json.Unmarshal(message, &request)
+			room, ok := openRooms[request.RoomKey]
+			if !ok {
+				return nil, fmt.Errorf("room with key \"%s\" not found", request.RoomKey)
 			}
-			key := strconv.Itoa(id)
-			room := contest.Room{Key: key, Creation: time.Now()}
-			openRooms[key] = room
-			response := createRoomResponse{Key: key}
+			player := room.Join(request.Name)
+			response := joinResponse{
+				Name: player.Name,
+				Key:  player.Key,
+			}
 			msg, _ := json.Marshal(response)
 			return msg, nil
 		},
@@ -78,6 +96,8 @@ func HandleFunc(options Options) http.HandlerFunc {
 		resp.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 		if req.Method == "OPTIONS" {
 			return
+		}
+		if req.Header.Get("Upgrade") == "websocket" {
 		}
 		if req.Method != "POST" {
 			resp.WriteHeader(http.StatusMethodNotAllowed)
