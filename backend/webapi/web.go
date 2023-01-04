@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/fafeitsch/city-knowledge-contest/backend/contest"
-	"math/rand"
+	"log"
 	"net/http"
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
@@ -50,7 +50,7 @@ type rpcMethod struct {
 type Method func(message json.RawMessage) (json.RawMessage, error)
 
 type Options struct {
-	Random *rand.Rand
+	AllowCors bool
 }
 
 type createRoomRequest struct {
@@ -81,6 +81,7 @@ func HandleFunc(options Options) http.HandlerFunc {
 			player := room.Join(request.Name)
 			openRooms[room.Key] = room
 			response := createRoomResponse{RoomKey: room.Key, PlayerKey: player.Key}
+			log.Printf("Created room \"%s\" from player \"%s\" (\"%s\").", room.Key, player.Key, player.Name)
 			msg, _ := json.Marshal(response)
 			return msg, nil
 		},
@@ -96,20 +97,20 @@ func HandleFunc(options Options) http.HandlerFunc {
 				Name:      player.Name,
 				PlayerKey: player.Key,
 			}
+			log.Printf("Player \"%s\" (\"%s\") joined room \"%s\".", player.Key, player.Name, room.Key)
 			msg, _ := json.Marshal(response)
 			return msg, nil
 		},
 	}
 	return func(resp http.ResponseWriter, req *http.Request) {
-		resp.Header().Set("Content-Type", "application/json")
-		resp.Header().Set("Access-Control-Allow-Origin", "*")
-		resp.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-		resp.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+		if options.AllowCors {
+			setCorsHeaders(resp)
+		}
 		if req.Method == "OPTIONS" {
 			return
 		}
 		if req.Header.Get("Upgrade") == "websocket" {
-			err := handleWebsocketRequest(resp, req)
+			err := handleWebsocketRequest(resp, req, options)
 			if err != nil {
 				fmt.Printf("%v")
 				resp.WriteHeader(http.StatusInternalServerError)
@@ -147,6 +148,13 @@ func HandleFunc(options Options) http.HandlerFunc {
 	}
 }
 
+func setCorsHeaders(resp http.ResponseWriter) {
+	resp.Header().Set("Content-Type", "application/json")
+	resp.Header().Set("Access-Control-Allow-Origin", "*")
+	resp.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	resp.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+}
+
 func handlePanic(resp http.ResponseWriter, request Request) {
 	if r := recover(); r != nil {
 		writeError(resp, -32603, request.Id, "a fatal error occurred during the method execution.")
@@ -174,7 +182,7 @@ type initialJoinMessage struct {
 	Players []string `json:"players"`
 }
 
-func handleWebsocketRequest(writer http.ResponseWriter, request *http.Request) error {
+func handleWebsocketRequest(writer http.ResponseWriter, request *http.Request, options Options) error {
 	parts := strings.Split(request.RequestURI, "/")
 	room, roomExists := openRooms[parts[2]]
 	if len(parts) != 4 || !roomExists {
@@ -184,7 +192,7 @@ func handleWebsocketRequest(writer http.ResponseWriter, request *http.Request) e
 	if player == nil {
 		writer.WriteHeader(http.StatusNotFound)
 	}
-	connection, err := websocket.Accept(writer, request, &websocket.AcceptOptions{InsecureSkipVerify: true})
+	connection, err := websocket.Accept(writer, request, &websocket.AcceptOptions{InsecureSkipVerify: options.AllowCors})
 	if err != nil {
 		return fmt.Errorf("could not upgrade to websockets: %v", err)
 	}
@@ -198,8 +206,13 @@ func handleWebsocketRequest(writer http.ResponseWriter, request *http.Request) e
 	for _, p := range existingPlayers {
 		players = append(players, p.Name)
 	}
-	_ = wsjson.Write(request.Context(), connection, websocketMessage{Topic: "successfullyJoined", Payload: initialJoinMessage{Players: players}})
+	_ = wsjson.Write(request.Context(), connection, websocketMessage{
+		Topic:   "successfullyJoined",
+		Payload: initialJoinMessage{Players: players},
+	})
+	log.Printf("Established websocket connection to player \"%s\" (\"%s\").", player.Key, player.Name)
 	<-notifier.closed
+	log.Printf("Connection to player \"%s\" (\"%s\") lost.", player.Key, player.Name)
 	return connection.Close(websocket.StatusNormalClosure, "")
 }
 
@@ -212,6 +225,7 @@ type websocketNotifier struct {
 func (w *websocketNotifier) NotifyPlayerJoined(name string) {
 	payload := map[string]string{"name": name}
 	err := wsjson.Write(w.context, w.connection, websocketMessage{Topic: "playerJoined", Payload: payload})
+	fmt.Printf("Notified")
 	fmt.Printf("%v", err)
 	if err != nil {
 		w.closed <- true

@@ -20,7 +20,7 @@ func (r *Room) Players() []Player {
 }
 
 func NewRoom() *Room {
-	return &Room{Key: keygen.Generate(), Creation: time.Now(), players: make([]Player, 0, 0)}
+	return &Room{Key: keygen.RoomKey(), Creation: time.Now(), players: make([]Player, 0, 0)}
 }
 
 func (r *Room) Join(name string) Player {
@@ -32,7 +32,7 @@ func (r *Room) Join(name string) Player {
 		}
 		player.NotifyPlayerJoined(name)
 	}
-	player := Player{Name: name, Key: keygen.Generate()}
+	player := Player{Name: name, Key: keygen.PlayerKey()}
 	r.players = append(r.players, player)
 	return player
 }
