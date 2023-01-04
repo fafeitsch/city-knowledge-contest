@@ -1,0 +1,40 @@
+/*!
+ * Licensed under the MIT License (https://opensource.org/licenses/MIT).
+ * Find the full license text in the LICENSE file of the project root.
+ */
+
+//Inspired by Dharman, https://stackoverflow.com/questions/62943224/utility-css-framework-library-for-angular-angular-material-flex-layout-proje
+
+$spaceamounts: (0, 5, 10, 15, 20);
+$sides: (top, bottom, left, right);
+
+@for $i from 1 through length($spaceamounts) {
+  $amount: nth($spaceamounts, $i);
+  @each $side in $sides {
+    .m#{str-slice($side, 0, 1)}-#{$i} {
+      margin-#{$side}: #{$amount}px !important;
+    }
+
+    .p#{str-slice($side, 0, 1)}-#{$i} {
+      padding-#{$side}: #{$amount}px !important;
+    }
+  }
+}
+
+@for $i from 1 through length($spaceamounts) {
+  $amount: nth($spaceamounts, $i);
+  .gap-#{$i} {
+    gap: #{$amount}px !important;
+  }
+}
+
+@for $i from 1 through length($spaceamounts) {
+  $amount: nth($spaceamounts, $i);
+  .m-#{$i} {
+    margin: #{$amount}px !important;
+  }
+
+  .p-#{$i} {
+    padding: #{$amount}px !important;
+  }
+}

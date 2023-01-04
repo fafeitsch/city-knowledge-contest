@@ -1,0 +1,59 @@
+/*!
+ * Licensed under the MIT License (https://opensource.org/licenses/MIT).
+ * Find the full license text in the LICENSE file of the project root.
+ */
+ .d-flex {
+    display: flex;
+  
+    &.justify-content-center {
+      justify-content: center;
+    }
+  
+    &.justify-content-end {
+      justify-content: flex-end;
+    }
+  
+    &.justify-content-spaced {
+      justify-content: space-between;
+    }
+  
+    &.align-items-center {
+      align-items: center;
+    }
+  
+    &.align-items-baseline {
+      align-items: baseline;
+    }
+  
+    &.align-items-start {
+      align-items: start;
+    }
+  
+    &.align-items-stretch {
+      align-items: stretch;
+    }
+  
+    &.align-items-end {
+      align-items: flex-end;
+    }
+  
+    &.flex-column {
+      flex-direction: column;
+    }
+  }
+  
+  .flex-grow-1 {
+    flex-grow: 1;
+  }
+  
+  .flex-shrink-0 {
+    flex-shrink: 0;
+  }
+  
+  .flex-shrink-1 {
+    flex-shrink: 1;
+  }
+  
+  .flex-wrap {
+    flex-wrap: wrap;
+  }
