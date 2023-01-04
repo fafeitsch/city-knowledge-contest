@@ -1,0 +1,30 @@
+POST http://127.0.0.1:23123/rpc
+Content-Type: application/json
+
+{
+  "method": "createRoom",
+  "id":"5555"
+}
+
+> {%
+client.global.set("roomKey", response.body.result.key)
+ %}
+
+###
+
+POST http://127.0.0.1:23123/rpc
+Content-Type: application/json
+
+{
+  "method": "joinRoom",
+  "params": {"roomKey":  "{{roomKey}}", "name":  "DosCoder"},
+  "id":"5555"
+}
+
+> {%
+client.global.set("playerKey", response.body.result.key)
+%}
+
+###
+
+WEBSOCKET ws://127.0.0.1:23123/ws/{{roomKey}}/{{playerKey}}

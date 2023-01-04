@@ -6,6 +6,8 @@ import (
 	"github.com/fafeitsch/city-knowledge-contest/backend/contest"
 	"math/rand"
 	"net/http"
+	"nhooyr.io/websocket"
+	"nhooyr.io/websocket/wsjson"
 	"reflect"
 	"runtime/debug"
 	"strings"
@@ -98,6 +100,12 @@ func HandleFunc(options Options) http.HandlerFunc {
 			return
 		}
 		if req.Header.Get("Upgrade") == "websocket" {
+			err := handleWebsocketRequest(resp, req)
+			if err != nil {
+				fmt.Printf("%v")
+				resp.WriteHeader(http.StatusInternalServerError)
+			}
+			return
 		}
 		if req.Method != "POST" {
 			resp.WriteHeader(http.StatusMethodNotAllowed)
@@ -146,4 +154,39 @@ func writeError(resp http.ResponseWriter, code int, id *string, format string, p
 	}
 	resp.WriteHeader(400)
 	_ = json.NewEncoder(resp).Encode(response)
+}
+
+type websocketMessage struct {
+	Topic   string `json:"topic"`
+	Payload any    `json:"payload"`
+}
+
+type initialJoinMessage struct {
+	Players []string `json:"players"`
+}
+
+func handleWebsocketRequest(writer http.ResponseWriter, request *http.Request) error {
+	parts := strings.Split(request.RequestURI, "/")
+	room, roomExists := openRooms[parts[2]]
+	if len(parts) != 4 || !roomExists {
+		writer.WriteHeader(http.StatusNotFound)
+	}
+	var player *contest.Player = nil
+	players := make([]string, 0, len(room.Players))
+	for _, p := range room.Players {
+		if p.Key == parts[3] {
+			player = &p
+		}
+		players = append(players, p.Name)
+	}
+	if player == nil {
+		writer.WriteHeader(http.StatusNotFound)
+	}
+	connection, err := websocket.Accept(writer, request, &websocket.AcceptOptions{InsecureSkipVerify: true})
+	if err != nil {
+		return fmt.Errorf("could not upgrade to websockets: %v", err)
+	}
+	wsjson.Write(request.Context(), connection, websocketMessage{Topic: "successfullyJoined", Payload: initialJoinMessage{Players: players}})
+	connection.Close(websocket.StatusNormalClosure, "Nothing more implemented yet.")
+	return nil
 }

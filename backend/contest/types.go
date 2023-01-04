@@ -8,11 +8,11 @@ import (
 type Room struct {
 	Key      string
 	Creation time.Time
-	players  []Player
+	Players  []Player
 }
 
 func NewRoom() *Room {
-	return &Room{Key: keygen.Generate(), Creation: time.Now(), players: make([]Player, 0, 0)}
+	return &Room{Key: keygen.Generate(), Creation: time.Now(), Players: make([]Player, 0, 0)}
 }
 
 type Player struct {
@@ -22,6 +22,6 @@ type Player struct {
 
 func (r *Room) Join(name string) Player {
 	player := Player{Name: name, Key: keygen.Generate()}
-	r.players = append(r.players, player)
+	r.Players = append(r.Players, player)
 	return player
 }
