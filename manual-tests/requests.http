@@ -1,3 +1,4 @@
+### Create Room
 POST http://127.0.0.1:23123/rpc
 Content-Type: application/json
 
@@ -12,14 +13,13 @@ client.global.set("roomKey", response.body.result.roomKey)
 client.global.set("playerKey", response.body.result.playerKey)
  %}
 
-###
-
+### Join Room
 POST http://127.0.0.1:23123/rpc
 Content-Type: application/json
 
 {
   "method": "joinRoom",
-  "params": {"roomKey":  "{{roomKey}}", "name":  "DosCoder"},
+  "params": {"roomKey":  "{{roomKey}}", "name":  "Rabbitt87"},
   "id":"5555"
 }
 
@@ -27,6 +27,6 @@ Content-Type: application/json
 client.global.set("playerKey", response.body.result.playerKey)
 %}
 
-###
+### Listen on Events
 
 WEBSOCKET ws://127.0.0.1:23123/ws/{{roomKey}}/{{playerKey}}

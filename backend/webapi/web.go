@@ -1,6 +1,7 @@
 package webapi
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/fafeitsch/city-knowledge-contest/backend/contest"
@@ -179,14 +180,7 @@ func handleWebsocketRequest(writer http.ResponseWriter, request *http.Request) e
 	if len(parts) != 4 || !roomExists {
 		writer.WriteHeader(http.StatusNotFound)
 	}
-	var player *contest.Player = nil
-	players := make([]string, 0, len(room.Players))
-	for _, p := range room.Players {
-		if p.Key == parts[3] {
-			player = &p
-		}
-		players = append(players, p.Name)
-	}
+	player := room.FindPlayer(parts[3])
 	if player == nil {
 		writer.WriteHeader(http.StatusNotFound)
 	}
@@ -194,7 +188,32 @@ func handleWebsocketRequest(writer http.ResponseWriter, request *http.Request) e
 	if err != nil {
 		return fmt.Errorf("could not upgrade to websockets: %v", err)
 	}
-	wsjson.Write(request.Context(), connection, websocketMessage{Topic: "successfullyJoined", Payload: initialJoinMessage{Players: players}})
-	connection.Close(websocket.StatusNormalClosure, "Nothing more implemented yet.")
-	return nil
+	notifier := &websocketNotifier{
+		connection: connection,
+		context:    request.Context(),
+	}
+	player.Notifier = notifier
+	existingPlayers := room.Players()
+	players := make([]string, 0, len(existingPlayers))
+	for _, p := range existingPlayers {
+		players = append(players, p.Name)
+	}
+	_ = wsjson.Write(request.Context(), connection, websocketMessage{Topic: "successfullyJoined", Payload: initialJoinMessage{Players: players}})
+	<-notifier.closed
+	return connection.Close(websocket.StatusNormalClosure, "")
+}
+
+type websocketNotifier struct {
+	connection *websocket.Conn
+	context    context.Context
+	closed     chan bool
+}
+
+func (w *websocketNotifier) NotifyPlayerJoined(name string) {
+	payload := map[string]string{"name": name}
+	err := wsjson.Write(w.context, w.connection, websocketMessage{Topic: "playerJoined", Payload: payload})
+	fmt.Printf("%v", err)
+	if err != nil {
+		w.closed <- true
+	}
 }
