@@ -56,6 +56,7 @@ type Options struct {
 
 type createRoomRequest struct {
 	Name string `json:"name"`
+	Area [][2]float64
 }
 
 type createRoomResponse struct {
@@ -78,7 +79,18 @@ func HandleFunc(options Options) http.HandlerFunc {
 		"createRoom": func(message json.RawMessage) (json.RawMessage, error) {
 			var request createRoomRequest
 			_ = json.Unmarshal(message, &request)
-			room := contest.NewRoom()
+			if len(request.Area) < 3 {
+				return nil, fmt.Errorf("the area of the room must consist of at least tree coordinates, "+
+					"but consists of %d", len(request.Area))
+			}
+			area := make([]contest.Coordinate, 0, len(request.Area))
+			for _, coordinate := range request.Area {
+				area = append(area, contest.Coordinate{
+					Lat: coordinate[0],
+					Lng: coordinate[1],
+				})
+			}
+			room := contest.NewRoom(area)
 			player := room.Join(request.Name)
 			openRooms[room.Key] = room
 			response := createRoomResponse{RoomKey: room.Key, PlayerKey: player.Key}

@@ -6,11 +6,17 @@ import (
 	"time"
 )
 
+type Coordinate struct {
+	Lat float64
+	Lng float64
+}
+
 type Room struct {
 	mutex    sync.RWMutex
 	Key      string
 	Creation time.Time
 	players  []Player
+	Area     []Coordinate
 }
 
 func (r *Room) Players() []Player {
@@ -19,7 +25,7 @@ func (r *Room) Players() []Player {
 	return r.players
 }
 
-func NewRoom() *Room {
+func NewRoom(area []Coordinate) *Room {
 	return &Room{Key: keygen.RoomKey(), Creation: time.Now(), players: make([]Player, 0, 0)}
 }
 
