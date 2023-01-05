@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"runtime/debug"
 	"strings"
+	"time"
 )
 
 var openRooms = make(map[string]*contest.Room)
@@ -112,7 +113,7 @@ func HandleFunc(options Options) http.HandlerFunc {
 		if req.Header.Get("Upgrade") == "websocket" {
 			err := handleWebsocketRequest(resp, req, options)
 			if err != nil {
-				fmt.Printf("%v")
+				fmt.Printf("%v", err)
 				resp.WriteHeader(http.StatusInternalServerError)
 			}
 			return
@@ -197,8 +198,9 @@ func handleWebsocketRequest(writer http.ResponseWriter, request *http.Request, o
 		return fmt.Errorf("could not upgrade to websockets: %v", err)
 	}
 	notifier := &websocketNotifier{
-		connection: connection,
-		context:    request.Context(),
+		write: func(msg any) {
+			_ = wsjson.Write(request.Context(), connection, msg)
+		},
 	}
 	player.Notifier = notifier
 	existingPlayers := room.Players()
@@ -211,23 +213,26 @@ func handleWebsocketRequest(writer http.ResponseWriter, request *http.Request, o
 		Payload: initialJoinMessage{Players: players},
 	})
 	log.Printf("Established websocket connection to player \"%s\" (\"%s\").", player.Key, player.Name)
-	<-notifier.closed
+	alive := true
+	for alive {
+		time.Sleep(10 * time.Second)
+		func() {
+			pingContext, cancel := context.WithTimeout(request.Context(), time.Second)
+			defer cancel()
+			pingErr := connection.Ping(pingContext)
+			alive = pingErr == nil
+		}()
+	}
 	log.Printf("Connection to player \"%s\" (\"%s\") lost.", player.Key, player.Name)
-	return connection.Close(websocket.StatusNormalClosure, "")
+	_ = connection.Close(websocket.StatusNormalClosure, "")
+	return nil
 }
 
 type websocketNotifier struct {
-	connection *websocket.Conn
-	context    context.Context
-	closed     chan bool
+	write func(msg any)
 }
 
 func (w *websocketNotifier) NotifyPlayerJoined(name string) {
 	payload := map[string]string{"name": name}
-	err := wsjson.Write(w.context, w.connection, websocketMessage{Topic: "playerJoined", Payload: payload})
-	fmt.Printf("Notified")
-	fmt.Printf("%v", err)
-	if err != nil {
-		w.closed <- true
-	}
+	w.write(websocketMessage{Topic: "playerJoined", Payload: payload})
 }
