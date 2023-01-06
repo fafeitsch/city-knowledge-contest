@@ -1,5 +1,5 @@
 ### Create Room
-POST http://127.0.0.1:5555/rpc
+POST http://127.0.0.1:23123/rpc
 Content-Type: application/json
 
 {
@@ -14,7 +14,7 @@ client.global.set("playerKey", response.body.result.playerKey)
  %}
 
 ### Join Room
-POST http://127.0.0.1:5555/rpc
+POST http://127.0.0.1:23123/rpc
 Content-Type: application/json
 
 {
@@ -27,6 +27,16 @@ Content-Type: application/json
 client.global.set("playerKey", response.body.result.playerKey)
 %}
 
+### Update Room
+POST http://127.0.0.1:23123/rpc
+Content-Type: application/json
+
+{
+  "method": "updateRoom",
+  "params": {"area":  [[33,22], [34,55], [12,12]], "numberOfQuestions":  25, "playerKey": "{{playerKey}}", "roomKey": "{{roomKey}}"},
+  "id":"5555"
+}
+
 ### Listen on Events
 
-WEBSOCKET ws://127.0.0.1:5555/ws/{{roomKey}}/{{playerKey}}
+WEBSOCKET ws://127.0.0.1:23123/ws/{{roomKey}}/{{playerKey}}

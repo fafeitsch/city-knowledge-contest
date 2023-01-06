@@ -1,7 +1,6 @@
 package webapi
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/fafeitsch/city-knowledge-contest/backend/contest"
@@ -9,7 +8,6 @@ import (
 	"net/http"
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
-	"reflect"
 	"runtime/debug"
 	"strings"
 	"time"
@@ -17,71 +15,38 @@ import (
 
 var openRooms = make(map[string]*contest.Room)
 
-type Request struct {
-	Jsonrpc string          `json:"jsonrpc"`
-	Method  string          `json:"method"`
-	Params  json.RawMessage `json:"params"`
-	Id      *string         `json:"id"`
-}
-
-type Response struct {
-	Jsonrpc string          `json:"jsonrpc"`
-	Result  json.RawMessage `json:"result,omitempty"`
-	Error   *Error          `json:"error,omitempty"`
-	Id      *string         `json:"id"`
-}
-
-type Error struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-}
-
-type Handler interface {
-	Methods() map[string]rpcMethod
-}
-
-type rpcMethod struct {
-	description    string
-	input          reflect.Type
-	output         reflect.Type
-	method         Method
-	persistChanged bool
-}
-
-type Method func(message json.RawMessage) (json.RawMessage, error)
-
-type Options struct {
-	AllowCors bool
-}
-
-type createRoomRequest struct {
-	Name string `json:"name"`
-	Area [][2]float64
-}
-
-type createRoomResponse struct {
-	RoomKey   string `json:"roomKey"`
-	PlayerKey string `json:"playerKey"`
-}
-
-type joinRequest struct {
-	Name    string `json:"name"`
-	RoomKey string `json:"roomKey"`
-}
-
-type joinResponse struct {
-	Name      string `json:"name"`
-	PlayerKey string `json:"playerKey"`
+func parseMessage[K any](message json.RawMessage) K {
+	var request K
+	_ = json.Unmarshal(message, &request)
+	return request
 }
 
 func HandleFunc(options Options) http.HandlerFunc {
 	methods := map[string]Method{
 		"createRoom": func(message json.RawMessage) (json.RawMessage, error) {
-			var request createRoomRequest
+			request := parseMessage[createRoomRequest](message)
+			room := contest.NewRoom()
+			player := room.Join(request.Name)
+			openRooms[room.Key] = room
+			response := createRoomResponse{
+				RoomKey:   room.Key,
+				PlayerKey: player.Key,
+			}
+			log.Printf("Created room \"%s\" from player \"%s\" (\"%s\").", room.Key, player.Key, player.Name)
+			msg, _ := json.Marshal(response)
+			return msg, nil
+		},
+		"updateRoom": func(message json.RawMessage) (json.RawMessage, error) {
+			request := parseMessage[roomUpdateRequest](message)
 			_ = json.Unmarshal(message, &request)
-			if len(request.Area) < 3 {
-				return nil, fmt.Errorf("the area of the room must consist of at least tree coordinates, "+
-					"but consists of %d", len(request.Area))
+			room, ok := openRooms[request.RoomKey]
+			if !ok {
+				return nil, fmt.Errorf("room with key \"%s\" not found", request.RoomKey)
+			}
+			if room.FindPlayer(request.PlayerKey) == nil {
+				return nil, fmt.Errorf(
+					"player with key \"%s\" has not joined the room yet",
+					request.PlayerKey)
 			}
 			area := make([]contest.Coordinate, 0, len(request.Area))
 			for _, coordinate := range request.Area {
@@ -90,17 +55,14 @@ func HandleFunc(options Options) http.HandlerFunc {
 					Lng: coordinate[1],
 				})
 			}
-			room := contest.NewRoom(area)
-			player := room.Join(request.Name)
-			openRooms[room.Key] = room
-			response := createRoomResponse{RoomKey: room.Key, PlayerKey: player.Key}
-			log.Printf("Created room \"%s\" from player \"%s\" (\"%s\").", room.Key, player.Key, player.Name)
-			msg, _ := json.Marshal(response)
-			return msg, nil
+			room.SetOptions(contest.RoomOptions{
+				Area:              area,
+				NumberOfQuestions: request.NumberOfQuestions,
+			}, request.PlayerKey)
+			return []byte("{}"), nil
 		},
 		"joinRoom": func(message json.RawMessage) (json.RawMessage, error) {
-			var request joinRequest
-			_ = json.Unmarshal(message, &request)
+			request := parseMessage[joinRequest](message)
 			room, ok := openRooms[request.RoomKey]
 			if !ok {
 				return nil, fmt.Errorf("room with key \"%s\" not found", request.RoomKey)
@@ -186,15 +148,6 @@ func writeError(resp http.ResponseWriter, code int, id *string, format string, p
 	_ = json.NewEncoder(resp).Encode(response)
 }
 
-type websocketMessage struct {
-	Topic   string `json:"topic"`
-	Payload any    `json:"payload"`
-}
-
-type initialJoinMessage struct {
-	Players []string `json:"players"`
-}
-
 func handleWebsocketRequest(writer http.ResponseWriter, request *http.Request, options Options) error {
 	parts := strings.Split(request.RequestURI, "/")
 	room, roomExists := openRooms[parts[2]]
@@ -222,20 +175,16 @@ func handleWebsocketRequest(writer http.ResponseWriter, request *http.Request, o
 	}
 	_ = wsjson.Write(request.Context(), connection, websocketMessage{
 		Topic:   "successfullyJoined",
-		Payload: initialJoinMessage{Players: players},
+		Payload: initialJoinMessage{Players: players, Options: convertRoomOptions(room.Options(), "")},
 	})
 	log.Printf("Established websocket connection to player \"%s\" (\"%s\").", player.Key, player.Name)
-	alive := true
-	for alive {
+	closeContext := connection.CloseRead(request.Context())
+	var pingErr error
+	for pingErr == nil {
+		pingErr = connection.Ping(closeContext)
 		time.Sleep(10 * time.Second)
-		func() {
-			pingContext, cancel := context.WithTimeout(request.Context(), time.Second)
-			defer cancel()
-			pingErr := connection.Ping(pingContext)
-			alive = pingErr == nil
-		}()
 	}
-	log.Printf("Connection to player \"%s\" (\"%s\") lost.", player.Key, player.Name)
+	log.Printf("Connection to player \"%s\" (\"%s\") lost: %v", player.Key, player.Name, pingErr)
 	_ = connection.Close(websocket.StatusNormalClosure, "")
 	return nil
 }
@@ -247,4 +196,26 @@ type websocketNotifier struct {
 func (w *websocketNotifier) NotifyPlayerJoined(name string) {
 	payload := map[string]string{"name": name}
 	w.write(websocketMessage{Topic: "playerJoined", Payload: payload})
+}
+
+func (w *websocketNotifier) NotifyRoomUpdated(options contest.RoomOptions, playerName string) {
+	message := convertRoomOptions(options, playerName)
+	w.write(websocketMessage{
+		Topic:   "roomUpdated",
+		Payload: message,
+	})
+}
+
+func convertRoomOptions(options contest.RoomOptions, playerName string) roomUpdateMessage {
+	area := make([][2]float64, 0, len(options.Area))
+	for _, coordinate := range options.Area {
+		area = append(area, [2]float64{coordinate.Lat, coordinate.Lng})
+	}
+	message := roomUpdateMessage{
+		Area:              area,
+		NumberOfQuestions: options.NumberOfQuestions,
+		PlayerName:        playerName,
+		Errors:            options.Errors(),
+	}
+	return message
 }
