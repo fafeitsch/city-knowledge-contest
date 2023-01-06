@@ -1,9 +1,8 @@
 <script lang="ts">
   import { combineLatest } from "rxjs";
-  import Counter from "./lib/Counter.svelte";
-  import Login from "./Login.svelte";
+  import Login from "./views/Login.svelte";
   import store from "./store";
-  import WaitingRoom from "./WaitingRoom.svelte";
+  import WaitingRoom from "./views/WaitingRoom.svelte";
 
   let gameState = "";
   store.get.gameState$.subscribe((state) => {
@@ -36,11 +35,17 @@
 </script>
 
 <main>
-  <h1>
-    {#if gameState === "inital"}
+  {#if gameState === "inital"}
+    <div class="d-flex flex-column gap-4 align-items-center">
+      <h1 class="old-font">City Knowledge Contest</h1>
+      <p class="mb-5">Wer findet die gesuchten Orte am schnellsten?</p>
       <Login />
-    {:else}
-      <WaitingRoom />
-    {/if}
-  </h1>
+    </div>
+  {:else}
+    <WaitingRoom />
+  {/if}
 </main>
+
+<footer>
+  <div class="p-3">Fancy Footer | License</div>
+</footer>

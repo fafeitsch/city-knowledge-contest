@@ -1,5 +1,7 @@
 <script lang="ts">
-  import store from "./store";
+  import Button from "../components/Button.svelte";
+  import Input from "../components/Input.svelte";
+  import store from "../store";
 
   type RoomResult = {
     roomKey: string;
@@ -13,6 +15,7 @@
   };
 
   let username = "";
+  let enterUsername = false;
   let roomId = "";
 
   function handleUsernameChange(event: Event) {
@@ -23,6 +26,12 @@
   function handleRoomIdChange(event: Event) {
     const target = event.target as HTMLInputElement;
     roomId = target.value;
+  }
+
+  function handleOnClick(event: Event) {
+    if (username.length > 0) {
+      enterUsername = true;
+    }
   }
 
   function createRoom() {
@@ -63,20 +72,21 @@
   }
 </script>
 
-{#if username.length === 0}
-  <div class="d-flex flex-column gap-3">
-    <input
+{#if !enterUsername}
+  <div class="d-flex flex-column gap-3 align-items-center">
+    <Input
       on:change={handleUsernameChange}
       placeholder="Gib deinen Spielername ein"
     />
-    <!-- <button>Neue Karte erstellen</button> -->
+    <Button on:click={handleOnClick} title="Los geht's" />
   </div>
 {:else}
-  <div class="d-flex gap-3">
-    <div class="d-flex flex-column gap-2">
-      <input on:change={handleRoomIdChange} placeholder="Karten-ID eingeben" />
-      <button on:click={joinRoom}>Karte beitreten</button>
+  <div class="d-flex gap-5 align-items-center">
+    <div class="d-flex flex-column gap-2 align-items-center">
+      <Input on:change={handleRoomIdChange} placeholder="Karten-ID eingeben" />
+      <Button on:click={joinRoom} title="Karte beitreten" />
     </div>
-    <button on:click={createRoom}>Erstelle eine neue Karte</button>
+    <div>– oder –</div>
+    <Button title="Erstelle eine neue Karte" on:click={createRoom} />
   </div>
 {/if}

@@ -1,10 +1,22 @@
 @import './styles/flex';
 @import './styles/space';
 @import './styles/typography';
+@import './styles/colors';
 
 body {
+    background-color: $old-map;
     height: 100vh;
     display: flex;
     align-items: center;
+    justify-content: center;
+    font-family: 'OpenSans';
+}
+
+footer {
+    width: 100%;
+    display: flex;
+    position: absolute;
+    bottom: 0;
+    left: 0;
     justify-content: center;
 }

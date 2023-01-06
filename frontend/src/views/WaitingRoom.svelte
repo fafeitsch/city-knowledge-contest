@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import store from "./store";
+  import store from "../store";
 
   let players: string[] = [];
   onMount(() => {

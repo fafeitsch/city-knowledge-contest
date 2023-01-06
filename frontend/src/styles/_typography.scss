@@ -1,3 +1,19 @@
 h1 {
     font-size: xx-large;
+    font-weight: bolder;
+}
+
+@font-face {
+    font-family: 'MedievalSharp';
+    src: url('./assets/fonts/MedievalSharp-Regular.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'OpenSans';
+    src: url('./assets/fonts/OpenSans-Regular.ttf') format('truetype');
+    font-weight: 400;
+}
+
+.old-font {
+    font-family: 'MedievalSharp';
 }
