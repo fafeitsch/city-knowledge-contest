@@ -20,14 +20,20 @@ func (p polygon) computeTriangulation() triangulation {
 	result := make([]triangle, 0, len(p)-2)
 	for len(current) > 3 {
 		index := 0
-		for !current.isEar(index) {
+		for index < len(current) && !current.isEar(index) {
 			index = index + 1
+		}
+		if index == len(current) {
+			for i, j := 0, len(current)-1; i < j; i, j = i+1, j-1 {
+				current[i], current[j] = current[j], current[i]
+			}
+			continue
 		}
 		previousIndex := index - 1
 		if previousIndex < 0 {
 			previousIndex = len(current) - 1
 		}
-		result = append(result, triangle{current[index], current[previousIndex], current[(index+1)%len(p)]})
+		result = append(result, triangle{current[index], current[previousIndex], current[(index+1)%len(current)]})
 		current = append(current[:index], current[index+1:]...)
 	}
 	return append(result, triangle{current[0], current[1], current[2]})

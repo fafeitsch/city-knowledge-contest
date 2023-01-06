@@ -76,6 +76,20 @@ func HandleFunc(options Options) http.HandlerFunc {
 			msg, _ := json.Marshal(response)
 			return msg, nil
 		},
+		"startGame": func(message json.RawMessage) (json.RawMessage, error) {
+			request := parseMessage[startGameRequest](message)
+			room, ok := openRooms[request.RoomKey]
+			if !ok {
+				return nil, fmt.Errorf("room with key \"%s\" not found", request.RoomKey)
+			}
+			if room.FindPlayer(request.PlayerKey) == nil {
+				return nil, fmt.Errorf(
+					"player with key \"%s\" has not joined the room yet",
+					request.PlayerKey)
+			}
+			go room.Play(request.PlayerKey)
+			return []byte("{}"), nil
+		},
 	}
 	return func(resp http.ResponseWriter, req *http.Request) {
 		if options.AllowCors {
@@ -204,6 +218,21 @@ func (w *websocketNotifier) NotifyRoomUpdated(options contest.RoomOptions, playe
 		Topic:   "roomUpdated",
 		Payload: message,
 	})
+}
+
+func (w *websocketNotifier) NotifyGameStarted(player string) {
+	message := map[string]string{"playerName": player}
+	w.write(websocketMessage{Topic: "gameStarted", Payload: message})
+}
+
+func (w *websocketNotifier) NotifyQuestionCountdown(followUps int) {
+	message := map[string]any{"followUps": followUps}
+	w.write(websocketMessage{Topic: "questionCountdown", Payload: message})
+}
+
+func (w *websocketNotifier) NotifyQuestion(question string) {
+	message := map[string]string{"find": question}
+	w.write(websocketMessage{Topic: "question", Payload: message})
 }
 
 func convertRoomOptions(options contest.RoomOptions, playerName string) roomUpdateMessage {

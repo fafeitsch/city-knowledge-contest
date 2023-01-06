@@ -84,3 +84,8 @@ type roomUpdateMessage struct {
 	PlayerName        string       `json:"playerName,omitempty"`
 	Errors            []string     `json:"errors"`
 }
+
+type startGameRequest struct {
+	PlayerKey string
+	RoomKey   string
+}
