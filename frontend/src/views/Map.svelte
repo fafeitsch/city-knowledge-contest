@@ -1,5 +1,5 @@
 <script lang="ts">
-  import L, { latLng } from "leaflet";
+  import L, { LatLng, latLng } from "leaflet";
   import { onMount } from "svelte";
   import { GameState } from "../store";
   import store from "../store";
@@ -9,27 +9,52 @@
   let gameState: GameState;
   let countdownValue: string;
   let question: string;
+  let playerKey: string;
+  let roomKey: string;
 
   onMount(() => {
     combineLatest([
       store.get.gameState$,
       store.get.countdownValue$,
       store.get.question$,
-    ]).subscribe(([gameState$, countdownValue$, question$]) => {
-      gameState = gameState$;
-      countdownValue = countdownValue$;
-      question = question$;
-    });
+      store.get.playerKey$,
+      store.get.roomId$,
+    ]).subscribe(
+      ([gameState$, countdownValue$, question$, playerKey$, roomId$]) => {
+        gameState = gameState$;
+        countdownValue = countdownValue$;
+        question = question$;
+        playerKey = playerKey$;
+        roomKey = roomId$;
+      }
+    );
   });
+
+  function answerQuestion(guess: LatLng) {
+    fetch("http://localhost:23123/rpc", {
+      method: "POST",
+      body: JSON.stringify({
+        method: "answerQuestion",
+        params: {
+          playerKey,
+          roomKey,
+          guess: [guess.lat, guess.lng],
+        },
+      }),
+    }).then((response) => response.json());
+  }
 
   function createMap(container) {
     let m = L.map(container).setView(latLng(50, 10), 5);
+
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: `&copy;<a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>,
 	        &copy;<a href="https://carto.com/attributions" target="_blank">CARTO</a>`,
       subdomains: "abcd",
       maxZoom: 20,
     }).addTo(m);
+
+    m.addEventListener("click", (e) => answerQuestion(e.latlng));
 
     return m;
   }
