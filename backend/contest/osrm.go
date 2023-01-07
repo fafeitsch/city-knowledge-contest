@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-var osrmServer = "http://127.0.0.1:5000"
+var OsrmServer = "http://127.0.0.1:5000"
 var client = http.Client{Timeout: 60 * time.Second}
 
 type osrmAddressResponse struct {
@@ -19,7 +19,7 @@ type osrmAddressResponse struct {
 }
 
 func queryStreet(c Coordinate, random *rand.Rand) (string, error) {
-	url := fmt.Sprintf("%s/nearest/v1/driving/%f,%f.json?number=10", osrmServer, c.Lng, c.Lat)
+	url := fmt.Sprintf("%s/nearest/v1/driving/%f,%f.json?number=10", OsrmServer, c.Lng, c.Lat)
 	log.Printf(url)
 	log.Printf("https://www.openstreetmap.org/?mlat=%f&mlon=%f#map=18/%f/%f", c.Lat, c.Lng, c.Lat, c.Lng)
 	osrmResp, err := client.Get(url)
