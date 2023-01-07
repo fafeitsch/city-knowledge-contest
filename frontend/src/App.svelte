@@ -28,6 +28,13 @@
           store.set.players(data.payload.players);
         } else if (data.topic === "playerJoined") {
           store.set.addPlayer(data.payload.name);
+        } else if (data.topic === "gameStarted") {
+          store.set.gameState(GameState.Started);
+        } else if (data.topic === "questionCountdown") {
+          store.set.gameState(GameState.QuestionCountdown);
+          store.set.countdownValue(data.payload.followUps);
+        } else if (data.topic === "question") {
+          store.set.gameState(GameState.Question);
         }
       };
     });
@@ -44,7 +51,7 @@
     </div>
   {:else if gameState === GameState.Waiting}
     <WaitingRoom />
-  {:else if gameState === GameState.Started}
+  {:else if gameState === GameState.Started || gameState === GameState.QuestionCountdown || gameState === GameState.Question}
     <Map />
   {/if}
 </main>

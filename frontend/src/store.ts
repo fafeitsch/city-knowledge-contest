@@ -5,6 +5,8 @@ export enum GameState {
   SetupMap,
   Waiting,
   Started,
+  QuestionCountdown,
+  Question,
   Finished,
 }
 
@@ -14,12 +16,14 @@ interface State {
   playerKey: string | undefined;
   gameState: GameState;
   players: string[];
+  countdownValue: string;
 }
 
 const state: State = {
   roomId: undefined,
   username: undefined,
   playerKey: undefined,
+  countdownValue: undefined,
   gameState: GameState.SetupUsername,
   players: [],
 };
@@ -46,6 +50,10 @@ export default {
     ),
     players$: state$.pipe(
       map((state) => state.players),
+      distinctUntilChanged()
+    ),
+    countdownValue$: state$.pipe(
+      map((state) => state.countdownValue),
       distinctUntilChanged()
     ),
   },
@@ -85,6 +93,12 @@ export default {
       state$.next({
         ...state$.value,
         players: newPlayers,
+      });
+    },
+    countdownValue(countdownValue: string) {
+      state$.next({
+        ...state$.value,
+        countdownValue,
       });
     },
   },

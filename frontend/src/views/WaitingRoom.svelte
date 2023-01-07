@@ -50,7 +50,7 @@
             [49.78941, 9.898338],
             [49.794453, 9.892845],
           ],
-          numberOfQuestions: 1,
+          numberOfQuestions: 10,
           playerKey,
           roomKey,
         },
