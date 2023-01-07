@@ -239,8 +239,8 @@ func (w *websocketNotifier) NotifyRoomUpdated(options contest.RoomOptions, playe
 	})
 }
 
-func (w *websocketNotifier) NotifyGameStarted(player string) {
-	message := map[string]string{"playerName": player}
+func (w *websocketNotifier) NotifyGameStarted(player string, center contest.Coordinate) {
+	message := map[string]any{"playerName": player, "center": [2]float64{center.Lat, center.Lng}}
 	w.write(websocketMessage{Topic: "gameStarted", Payload: message})
 }
 
@@ -260,7 +260,13 @@ func (w *websocketNotifier) NotifyAnswerTimeCountdown(followUps int) {
 }
 
 func (w *websocketNotifier) NotifyQuestionResults(result contest.QuestionResult) {
-	message := map[string]any{"question": result.Question, "solution": result.Solution}
+	message := map[string]any{
+		"question": result.Question,
+		"solution": [2]float64{
+			result.Solution.Lat,
+			result.Solution.Lng,
+		},
+	}
 	w.write(websocketMessage{Topic: "questionFinished", Payload: message})
 }
 

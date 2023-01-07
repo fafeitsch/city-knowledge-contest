@@ -154,11 +154,12 @@ func (r *Room) Play(playerKey string) {
 	if startPlayer == nil {
 		panic(fmt.Sprintf("player with key \"%s\" does not exist in this room", playerKey))
 	}
+	triangles := polygon(r.Options().Area).computeTriangulation()
+	center := triangles.randomPoint(r.random)
 	r.notifyPlayers(func(player Player) {
-		player.NotifyGameStarted(playerKey)
+		player.NotifyGameStarted(startPlayer.Name, center)
 	})
 	numberOfQuestions := r.options.NumberOfQuestions
-	triangles := polygon(r.Options().Area).computeTriangulation()
 	for round := 0; round < numberOfQuestions; round++ {
 		r.playQuestion(round, triangles)
 	}
@@ -253,7 +254,7 @@ type QuestionResult struct {
 type Notifier interface {
 	NotifyPlayerJoined(string)
 	NotifyRoomUpdated(RoomOptions, string)
-	NotifyGameStarted(string)
+	NotifyGameStarted(string, Coordinate)
 	NotifyQuestionCountdown(int)
 	NotifyQuestion(string)
 	NotifyAnswerTimeCountdown(int)
