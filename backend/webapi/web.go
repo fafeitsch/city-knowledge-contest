@@ -38,7 +38,6 @@ func HandleFunc(options Options) http.HandlerFunc {
 		},
 		"updateRoom": func(message json.RawMessage) (json.RawMessage, error) {
 			request := parseMessage[roomUpdateRequest](message)
-			_ = json.Unmarshal(message, &request)
 			room, ok := openRooms[request.RoomKey]
 			if !ok {
 				return nil, fmt.Errorf("room with key \"%s\" not found", request.RoomKey)

@@ -1,7 +1,8 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import Button from "../components/Button.svelte";
   import Input from "../components/Input.svelte";
-  import store from "../store";
+  import store, { GameState } from "../store";
 
   type RoomResult = {
     roomKey: string;
@@ -15,8 +16,14 @@
   };
 
   let username = "";
-  let enterUsername = false;
   let roomId = "";
+  let gameState: GameState;
+
+  onMount(() => {
+    store.get.gameState$.subscribe((value) => {
+      gameState = value;
+    });
+  });
 
   function handleUsernameChange(event: Event) {
     const target = event.target as HTMLInputElement;
@@ -28,10 +35,8 @@
     roomId = target.value;
   }
 
-  function handleOnClick(event: Event) {
-    if (username.length > 0) {
-      enterUsername = true;
-    }
+  function handleOnClick() {
+    store.set.gameState(GameState.SetupMap);
   }
 
   function createRoom() {
@@ -48,7 +53,7 @@
       .then((data: Response<RoomResult>) => {
         store.set.roomId(data.result.roomKey);
         store.set.playerKey(data.result.playerKey);
-        store.set.gameState("waiting");
+        store.set.gameState(GameState.Waiting);
       });
   }
 
@@ -67,12 +72,12 @@
       .then((data: Response<RoomResult>) => {
         store.set.roomId(roomId);
         store.set.playerKey(data.result.playerKey);
-        store.set.gameState("waiting");
+        store.set.gameState(GameState.Waiting);
       });
   }
 </script>
 
-{#if !enterUsername}
+{#if gameState === GameState.SetupUsername}
   <div class="d-flex flex-column gap-3 align-items-center">
     <Input
       on:change={handleUsernameChange}
@@ -80,13 +85,13 @@
     />
     <Button on:click={handleOnClick} title="Los geht's" />
   </div>
-{:else}
+{:else if gameState === GameState.SetupMap}
   <div class="d-flex gap-5 align-items-center">
     <div class="d-flex flex-column gap-2 align-items-center">
       <Input on:change={handleRoomIdChange} placeholder="Karten-ID eingeben" />
       <Button on:click={joinRoom} title="Karte beitreten" />
     </div>
     <div>– oder –</div>
-    <Button title="Erstelle eine neue Karte" on:click={createRoom} />
+    <Button title="Eine neue Karte erstellen" on:click={createRoom} />
   </div>
 {/if}

@@ -1,10 +1,18 @@
-import { BehaviorSubject, distinctUntilChanged, map } from 'rxjs';
+import { BehaviorSubject, distinctUntilChanged, map } from "rxjs";
+
+export enum GameState {
+  SetupUsername,
+  SetupMap,
+  Waiting,
+  Started,
+  Finished,
+}
 
 interface State {
   roomId: string | undefined;
   username: string | undefined;
   playerKey: string | undefined;
-  gameState: 'inital' | 'waiting' | 'started';
+  gameState: GameState;
   players: string[];
 }
 
@@ -12,7 +20,7 @@ const state: State = {
   roomId: undefined,
   username: undefined,
   playerKey: undefined,
-  gameState: 'inital',
+  gameState: GameState.SetupUsername,
   players: [],
 };
 
@@ -60,7 +68,7 @@ export default {
         playerKey,
       });
     },
-    gameState(gameState: 'inital' | 'waiting' | 'started') {
+    gameState(gameState: GameState) {
       state$.next({
         ...state$.value,
         gameState,

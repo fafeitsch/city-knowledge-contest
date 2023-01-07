@@ -1,10 +1,11 @@
 <script lang="ts">
   import { combineLatest } from "rxjs";
   import Login from "./views/Login.svelte";
-  import store from "./store";
+  import store, { GameState } from "./store";
   import WaitingRoom from "./views/WaitingRoom.svelte";
+  import Map from "./views/Map.svelte";
 
-  let gameState = "";
+  let gameState: GameState;
   store.get.gameState$.subscribe((state) => {
     gameState = state;
   });
@@ -15,7 +16,7 @@
       store.get.playerKey$,
       store.get.gameState$,
     ]).subscribe(([roomId, playerKey, gameState]) => {
-      if (gameState !== "waiting") {
+      if (gameState !== GameState.Waiting) {
         return;
       }
       const websocket = new WebSocket(
@@ -35,14 +36,16 @@
 </script>
 
 <main>
-  {#if gameState === "inital"}
+  {#if gameState === GameState.SetupUsername || gameState === GameState.SetupMap}
     <div class="d-flex flex-column gap-4 align-items-center">
       <h1 class="old-font">City Knowledge Contest</h1>
-      <p class="mb-5">Wer findet die gesuchten Orte am schnellsten?</p>
+      <p class="mb-5 fs-large">Wer findet die gesuchten Orte am schnellsten?</p>
       <Login />
     </div>
-  {:else}
+  {:else if gameState === GameState.Waiting}
     <WaitingRoom />
+  {:else if gameState === GameState.Started}
+    <Map />
   {/if}
 </main>
 
