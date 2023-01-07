@@ -35,6 +35,7 @@
           store.set.countdownValue(data.payload.followUps);
         } else if (data.topic === "question") {
           store.set.gameState(GameState.Question);
+          store.set.question(data.payload.find);
         }
       };
     });

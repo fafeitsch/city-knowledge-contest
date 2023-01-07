@@ -8,14 +8,18 @@
   let map;
   let gameState: GameState;
   let countdownValue: string;
+  let question: string;
 
   onMount(() => {
-    combineLatest([store.get.gameState$, store.get.countdownValue$]).subscribe(
-      ([gameState$, countdownValue$]) => {
-        gameState = gameState$;
-        countdownValue = countdownValue$;
-      }
-    );
+    combineLatest([
+      store.get.gameState$,
+      store.get.countdownValue$,
+      store.get.question$,
+    ]).subscribe(([gameState$, countdownValue$, question$]) => {
+      gameState = gameState$;
+      countdownValue = countdownValue$;
+      question = question$;
+    });
   });
 
   function createMap(container) {
@@ -47,9 +51,16 @@
     <div class="overlay">{countdownValue}</div>
   {/if}
   <div class="map" style="height:100vh;width:100vw" use:mapAction />
+  {#if gameState === GameState.Question}
+    <div class="question">
+      <div>Suche den Ort {question}</div>
+    </div>
+  {/if}
 </div>
 
 <style lang="scss">
+  @import "../styles/variables";
+
   .overlay {
     z-index: 10000;
     height: 100vh;
@@ -62,5 +73,18 @@
     align-items: center;
     justify-content: center;
     font-size: 128px;
+  }
+
+  .question {
+    z-index: 999;
+    position: absolute;
+    bottom: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 150px;
+    width: 100vw;
+    background-color: $beige;
+    font-size: xx-large;
   }
 </style>

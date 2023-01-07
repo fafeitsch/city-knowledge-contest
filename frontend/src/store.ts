@@ -17,6 +17,7 @@ interface State {
   gameState: GameState;
   players: string[];
   countdownValue: string;
+  question: string;
 }
 
 const state: State = {
@@ -26,6 +27,7 @@ const state: State = {
   countdownValue: undefined,
   gameState: GameState.SetupUsername,
   players: [],
+  question: undefined,
 };
 
 const state$ = new BehaviorSubject<State>(state);
@@ -54,6 +56,10 @@ export default {
     ),
     countdownValue$: state$.pipe(
       map((state) => state.countdownValue),
+      distinctUntilChanged()
+    ),
+    question$: state$.pipe(
+      map((state) => state.question),
       distinctUntilChanged()
     ),
   },
@@ -99,6 +105,12 @@ export default {
       state$.next({
         ...state$.value,
         countdownValue,
+      });
+    },
+    question(question: string) {
+      state$.next({
+        ...state$.value,
+        question,
       });
     },
   },
