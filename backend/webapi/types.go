@@ -86,6 +86,12 @@ type roomUpdateMessage struct {
 }
 
 type startGameRequest struct {
-	PlayerKey string
-	RoomKey   string
+	PlayerKey string `json:"playerKey"`
+	RoomKey   string `json:"roomKey"`
+}
+
+type guessRequest struct {
+	PlayerKey string     `json:"playerKey"`
+	RoomKey   string     `json:"roomKey"`
+	Guess     [2]float64 `json:"guess"`
 }

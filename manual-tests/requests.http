@@ -53,7 +53,7 @@ Content-Type: application/json
 [49.793566,9.926147],
 [49.790851,9.907608],
 [49.789410,9.898338],
-[49.794453,9.892845]], "numberOfQuestions":  10, "playerKey": "{{playerKey}}", "roomKey": "{{roomKey}}"},
+[49.794453,9.892845]], "numberOfQuestions":  1, "playerKey": "{{playerKey}}", "roomKey": "{{roomKey}}"},
   "id":"5555"
 }
 
@@ -64,6 +64,16 @@ Content-Type: application/json
 {
   "method": "startGame",
   "params": {"playerKey": "{{playerKey}}", "roomKey": "{{roomKey}}"},
+  "id": "5555"
+}
+
+### Answer Question
+POST http://127.0.0.1:23123/rpc
+Content-Type: application/json
+
+{
+  "method": "answerQuestion",
+  "params": {"playerKey": "{{playerKey}}", "roomKey": "{{roomKey}}", "guess": [49.7970, 9.8982]},
   "id": "5555"
 }
 
