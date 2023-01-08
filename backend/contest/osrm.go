@@ -22,7 +22,7 @@ type osrmAddressResponse struct {
 func queryStreet(c Coordinate, random *rand.Rand) (string, Coordinate, error) {
 	url, osrmWaypoints, err := sendOsrmRequest(c)
 	if err != nil {
-		return "", Coordinate{}, nil
+		return "", Coordinate{}, err
 	}
 	random.Shuffle(len(osrmWaypoints.Waypoints), func(i, j int) {
 		osrmWaypoints.Waypoints[i], osrmWaypoints.Waypoints[j] = osrmWaypoints.Waypoints[j], osrmWaypoints.Waypoints[i]

@@ -14,7 +14,7 @@ type Coordinate struct {
 }
 
 type Room struct {
-	mutex           sync.RWMutex
+	mutex           sync.Mutex
 	Key             string
 	Creation        time.Time
 	players         map[string]*Player
@@ -75,9 +75,15 @@ func (r *RoomOptions) Errors() []string {
 	return errors
 }
 
+func (r *Room) Lock() {
+	r.mutex.Lock()
+}
+
+func (r *Room) Unlock() {
+	r.mutex.Unlock()
+}
+
 func (r *Room) Players() []Player {
-	r.mutex.RLock()
-	defer r.mutex.RUnlock()
 	result := make([]Player, 0, len(r.players))
 	for key := range r.players {
 		result = append(result, *r.players[key])
@@ -107,8 +113,6 @@ func (r *Room) ConfigErrors() []string {
 }
 
 func (r *Room) SetOptions(options RoomOptions, playerKey string) {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
 	player, ok := r.players[playerKey]
 	if !ok {
 		panic(fmt.Sprintf("player with key \"%s\" does not exist in room \"%s\"", playerKey, r.Key))
@@ -120,8 +124,6 @@ func (r *Room) SetOptions(options RoomOptions, playerKey string) {
 }
 
 func (r *Room) Join(name string) Player {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
 	player := Player{Name: name, Secret: keygen.PlayerKey(), Key: keygen.PlayerKey()}
 	r.notifyPlayers(func(p Player) {
 		p.NotifyPlayerJoined(player.Name, player.Key)
@@ -131,8 +133,6 @@ func (r *Room) Join(name string) Player {
 }
 
 func (r *Room) FindPlayer(key string) (*Player, bool) {
-	r.mutex.RLock()
-	defer r.mutex.RUnlock()
 	result, ok := r.players[key]
 	return result, ok
 }
@@ -160,9 +160,11 @@ func (r *Room) Play(playerKey string) {
 		player.NotifyGameStarted(startPlayer.Name, center)
 	})
 	numberOfQuestions := r.options.NumberOfQuestions
-	for round := 0; round < numberOfQuestions; round++ {
-		r.playQuestion(round, triangles)
-	}
+	go func() {
+		for round := 0; round < numberOfQuestions; round++ {
+			r.playQuestion(round, triangles)
+		}
+	}()
 }
 
 func (r *Room) playQuestion(round int, triangles triangulation) error {
@@ -184,15 +186,17 @@ func (r *Room) playQuestion(round int, triangles triangulation) error {
 	r.sendCountdowns(3, func(player Player) func(int) {
 		return player.NotifyQuestionCountdown
 	})
-	r.notifyPlayers(func(player Player) {
-		player.NotifyQuestion(question)
-	})
+	r.Lock()
 	r.currentQuestion = &Question{
 		StreetName:         question,
 		Solution:           solution,
 		points:             make(map[string]int),
 		allPlayersAnswered: make(chan bool),
 	}
+	r.Unlock()
+	r.notifyPlayers(func(player Player) {
+		player.NotifyQuestion(question)
+	})
 	r.currentQuestion.waitForPlayers(func(followUps int) {
 		r.notifyPlayers(func(player Player) {
 			player.NotifyAnswerTimeCountdown(followUps)
@@ -207,6 +211,9 @@ func (r *Room) playQuestion(round int, triangles triangulation) error {
 	r.notifyPlayers(func(player Player) {
 		player.NotifyQuestionResults(result)
 	})
+	r.Lock()
+	r.currentQuestion = nil
+	r.Unlock()
 
 	return nil
 }

@@ -62,12 +62,15 @@ func HandleFunc(options Options) http.HandlerFunc {
 			writeError(resp, -32601, request.Id, "the requested method \"%s\" was not found", request.Method)
 			return
 		}
-		processor, err := validator(request.Params)
+		rpcRequest, err := validator(request.Params)
+		if rpcRequest != nil && rpcRequest.release != nil {
+			defer rpcRequest.release()
+		}
 		if err != nil {
 			writeError(resp, -32602, request.Id, "the validation for method \"%s\" failed: %v", request.Method, err)
 			return
 		}
-		result, err := processor()
+		result, err := rpcRequest.process()
 		if err != nil {
 			writeError(resp, -32603, request.Id, "execution of method \"%s\" failed: %v", request.Method, err)
 			return
