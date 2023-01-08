@@ -190,7 +190,7 @@ func answerQuestion(message json.RawMessage) (*rpcRequestContext, error) {
 			if err != nil {
 				return nil, fmt.Errorf("could not validate answer: %v", err)
 			}
-			return map[string]bool{"correct": result}, nil
+			return map[string]int{"points": result}, nil
 		},
 		release: unlockRoom(room),
 	}, nil

@@ -124,8 +124,18 @@ func (w *websocketNotifier) NotifyQuestionResults(result contest.QuestionResult)
 			result.Solution.Lat,
 			result.Solution.Lng,
 		},
+		"delta":  result.PointDelta,
+		"points": result.Points,
 	}
 	w.write(websocketMessage{Topic: "questionFinished", Payload: message})
+}
+
+func (w *websocketNotifier) NotifyGameEnded(reason string, result map[string]int) {
+	message := map[string]any{
+		"reason": reason,
+		"result": result,
+	}
+	w.write(websocketMessage{Topic: "gameEnded", Payload: message})
 }
 
 func convertRoomOptions(options contest.RoomOptions, playerKey string) roomUpdateMessage {

@@ -3,6 +3,8 @@ package contest
 import (
 	"fmt"
 	"github.com/fafeitsch/city-knowledge-contest/backend/keygen"
+	"log"
+	"math"
 	"math/rand"
 	"sync"
 	"time"
@@ -18,6 +20,7 @@ type Room struct {
 	Key             string
 	Creation        time.Time
 	players         map[string]*Player
+	points          map[string]int
 	random          *rand.Rand
 	options         RoomOptions
 	currentQuestion *Question
@@ -33,10 +36,11 @@ type Question struct {
 	Solution           Coordinate
 	points             map[string]int
 	allPlayersAnswered chan bool
+	begin              time.Time
+	duration           time.Duration
 }
 
-func (q *Question) waitForPlayers(countdown func(int)) {
-	questionTimeout := 120 * time.Second
+func (q *Question) waitForPlayers(questionTimeout time.Duration, countdown func(int)) {
 	t2 := time.NewTimer(questionTimeout - (1 * time.Second))
 	t1 := time.NewTimer(questionTimeout - (2 * time.Second))
 	finish := time.NewTimer(questionTimeout)
@@ -160,10 +164,21 @@ func (r *Room) Play(playerKey string) {
 		player.NotifyGameStarted(startPlayer.Name, center)
 	})
 	numberOfQuestions := r.options.NumberOfQuestions
+	r.points = make(map[string]int)
 	go func() {
 		for round := 0; round < numberOfQuestions; round++ {
-			r.playQuestion(round, triangles)
+			err := r.playQuestion(round, triangles)
+			if err != nil {
+				log.Printf("game in room \"%s\" ended due to an error: %v", r.Key, err)
+				r.notifyPlayers(func(player Player) {
+					player.NotifyGameEnded("error", r.points)
+				})
+			}
 		}
+		r.notifyPlayers(func(player Player) {
+			player.NotifyGameEnded("finished", r.points)
+		})
+		r.points = nil
 	}()
 }
 
@@ -192,21 +207,26 @@ func (r *Room) playQuestion(round int, triangles triangulation) error {
 		Solution:           solution,
 		points:             make(map[string]int),
 		allPlayersAnswered: make(chan bool),
+		begin:              time.Now(),
+		duration:           120 * time.Second,
 	}
 	r.Unlock()
 	r.notifyPlayers(func(player Player) {
 		player.NotifyQuestion(question)
 	})
-	r.currentQuestion.waitForPlayers(func(followUps int) {
+	r.currentQuestion.waitForPlayers(r.currentQuestion.duration, func(followUps int) {
 		r.notifyPlayers(func(player Player) {
 			player.NotifyAnswerTimeCountdown(followUps)
 		})
 	})
+	for key, value := range r.currentQuestion.points {
+		r.points[key] = r.points[key] + value
+	}
 	result := QuestionResult{
 		Question:   question,
 		Solution:   solution,
-		PointDelta: map[string]int{},
-		Points:     map[string]int{},
+		PointDelta: r.currentQuestion.points,
+		Points:     r.points,
 	}
 	r.notifyPlayers(func(player Player) {
 		player.NotifyQuestionResults(result)
@@ -218,7 +238,7 @@ func (r *Room) playQuestion(round int, triangles triangulation) error {
 	return nil
 }
 
-func (r *Room) AnswerQuestion(playerKey string, guess Coordinate) (bool, error) {
+func (r *Room) AnswerQuestion(playerKey string, guess Coordinate) (int, error) {
 	_, ok := r.players[playerKey]
 	if !ok {
 		panic(fmt.Sprintf("player with key \"%s\" not found in this room", playerKey))
@@ -226,14 +246,16 @@ func (r *Room) AnswerQuestion(playerKey string, guess Coordinate) (bool, error) 
 	question := r.currentQuestion
 	result, err := verifyAnswer(guess, question.StreetName)
 	if result {
-		question.points[playerKey] = 100
+		difference := time.Now().Sub(question.begin)
+		percent := 1.0 * float64(difference.Milliseconds()) / float64(question.duration.Milliseconds())
+		question.points[playerKey] = int(math.Max(10, 100-(100*percent)))
 	} else {
 		question.points[playerKey] = 0
 	}
 	if len(question.points) == len(r.players) {
 		question.allPlayersAnswered <- true
 	}
-	return result, err
+	return question.points[playerKey], err
 }
 
 func (r *Room) HasActiveQuestion() bool {
@@ -271,4 +293,5 @@ type Notifier interface {
 	NotifyQuestion(string)
 	NotifyAnswerTimeCountdown(int)
 	NotifyQuestionResults(result QuestionResult)
+	NotifyGameEnded(reason string, result map[string]int)
 }

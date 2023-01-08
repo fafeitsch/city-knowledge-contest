@@ -55,7 +55,7 @@ Content-Type: application/json
 [49.793566,9.926147],
 [49.790851,9.907608],
 [49.789410,9.898338],
-[49.794453,9.892845]], "numberOfQuestions":  1, "playerKey": "{{playerKey}}", "roomKey": "{{roomKey}}", "playerSecret":  "{{playerSecret}}"},
+[49.794453,9.892845]], "numberOfQuestions":  2, "playerKey": "{{playerKey}}", "roomKey": "{{roomKey}}", "playerSecret":  "{{playerSecret}}"},
   "id":"5555"
 }
 
