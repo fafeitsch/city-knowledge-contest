@@ -196,6 +196,23 @@ func answerQuestion(message json.RawMessage) (*rpcRequestContext, error) {
 	}, nil
 }
 
+func advanceGame(message json.RawMessage) (*rpcRequestContext, error) {
+	request := parseMessage[startGameRequest](message)
+	room, err := validateRoomAndPlayer(request.RoomKey, request.PlayerKey, request.PlayerSecret)
+	if err != nil {
+		return &rpcRequestContext{release: unlockRoom(room)}, err
+	}
+	if !room.CanBeAdvanced() {
+		return &rpcRequestContext{release: unlockRoom(room)}, fmt.Errorf("the room \"%s\" cannot be advanced", request.RoomKey)
+	}
+	return &rpcRequestContext{
+		process: func() (any, error) {
+			room.AdvanceToNextQuestion()
+			return map[string]any{}, nil
+		}, release: unlockRoom(room),
+	}, err
+}
+
 func unlockRoom(room *contest.Room) func() {
 	return func() {
 		if room != nil {

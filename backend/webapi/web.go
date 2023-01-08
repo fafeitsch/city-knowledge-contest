@@ -25,6 +25,7 @@ func HandleFunc(options Options) http.HandlerFunc {
 		"joinRoom":       joinRoom,
 		"startGame":      startGame,
 		"answerQuestion": answerQuestion,
+		"advanceGame":    advanceGame,
 	}
 	return func(resp http.ResponseWriter, req *http.Request) {
 		if options.AllowCors {

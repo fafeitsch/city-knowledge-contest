@@ -79,6 +79,17 @@ Content-Type: application/json
   "id": "5555"
 }
 
+### Advance Game
+POST http://127.0.0.1:23123/rpc
+Content-Type: application/json
+
+{
+  "method": "advanceGame",
+  "params": {"playerKey": "{{playerKey}}", "roomKey": "{{roomKey}}", "playerSecret": "{{playerSecret}}"},
+  "id": "5555"
+}
+
+
 ### Listen on Events
 
 WEBSOCKET ws://127.0.0.1:23123/ws/{{roomKey}}/{{playerKey}}

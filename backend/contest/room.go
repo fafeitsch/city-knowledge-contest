@@ -24,6 +24,7 @@ type Room struct {
 	random          *rand.Rand
 	options         RoomOptions
 	currentQuestion *Question
+	advanceGame     chan bool
 }
 
 type RoomOptions struct {
@@ -165,6 +166,7 @@ func (r *Room) Play(playerKey string) {
 	})
 	numberOfQuestions := r.options.NumberOfQuestions
 	r.points = make(map[string]int)
+	r.advanceGame = make(chan bool)
 	go func() {
 		for round := 0; round < numberOfQuestions; round++ {
 			err := r.playQuestion(round, triangles)
@@ -174,10 +176,14 @@ func (r *Room) Play(playerKey string) {
 					player.NotifyGameEnded("error", r.points)
 				})
 			}
+			if round != numberOfQuestions-1 {
+				<-r.advanceGame
+			}
 		}
 		r.notifyPlayers(func(player Player) {
 			player.NotifyGameEnded("finished", r.points)
 		})
+		r.advanceGame = nil
 		r.points = nil
 	}()
 }
@@ -260,6 +266,14 @@ func (r *Room) AnswerQuestion(playerKey string, guess Coordinate) (int, error) {
 
 func (r *Room) HasActiveQuestion() bool {
 	return r.currentQuestion != nil
+}
+
+func (r *Room) CanBeAdvanced() bool {
+	return r.advanceGame != nil
+}
+
+func (r *Room) AdvanceToNextQuestion() {
+	r.advanceGame <- true
 }
 
 func (r *Room) sendCountdowns(amount int, consumer func(Player) func(int)) {
