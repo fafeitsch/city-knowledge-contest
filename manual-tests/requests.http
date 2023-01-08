@@ -11,6 +11,7 @@ Content-Type: application/json
 > {%
 client.global.set("roomKey", response.body.result.roomKey)
 client.global.set("playerKey", response.body.result.playerKey)
+client.global.set("playerSecret", response.body.result.playerSecret)
  %}
 
 ### Join Room
@@ -25,6 +26,7 @@ Content-Type: application/json
 
 > {%
 client.global.set("playerKey", response.body.result.playerKey)
+client.global.set("playerSecret", response.body.result.playerSecret)
 %}
 
 ### Update Room
@@ -53,7 +55,7 @@ Content-Type: application/json
 [49.793566,9.926147],
 [49.790851,9.907608],
 [49.789410,9.898338],
-[49.794453,9.892845]], "numberOfQuestions":  1, "playerKey": "{{playerKey}}", "roomKey": "{{roomKey}}"},
+[49.794453,9.892845]], "numberOfQuestions":  1, "playerKey": "{{playerKey}}", "roomKey": "{{roomKey}}", "playerSecret":  "{{playerSecret}}"},
   "id":"5555"
 }
 
@@ -63,7 +65,7 @@ Content-Type: application/json
 
 {
   "method": "startGame",
-  "params": {"playerKey": "{{playerKey}}", "roomKey": "{{roomKey}}"},
+  "params": {"playerKey": "{{playerKey}}", "roomKey": "{{roomKey}}", "playerSecret": "{{playerSecret}}"},
   "id": "5555"
 }
 
@@ -73,10 +75,11 @@ Content-Type: application/json
 
 {
   "method": "answerQuestion",
-  "params": {"playerKey": "{{playerKey}}", "roomKey": "{{roomKey}}", "guess": [49.7970, 9.8982]},
+  "params": {"playerKey": "{{playerKey}}", "roomKey": "{{roomKey}}", "guess": [49.7970, 9.8982], "playerSecret":  "{{playerSecret}}"},
   "id": "5555"
 }
 
 ### Listen on Events
 
 WEBSOCKET ws://127.0.0.1:23123/ws/{{roomKey}}/{{playerKey}}
+ckc-player-secret: {{playerSecret}}

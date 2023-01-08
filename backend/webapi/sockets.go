@@ -16,10 +16,13 @@ func handleWebsocketRequest(writer http.ResponseWriter, request *http.Request, o
 	room, roomExists := openRooms[parts[2]]
 	if len(parts) != 4 || !roomExists {
 		writer.WriteHeader(http.StatusNotFound)
+		return nil
 	}
-	player := room.FindPlayer(parts[3])
-	if player == nil {
-		writer.WriteHeader(http.StatusNotFound)
+	secret := request.Header.Get("ckc-player-secret")
+	player, ok := room.FindPlayer(parts[3])
+	if !ok || player.Secret != secret {
+		writer.WriteHeader(http.StatusUnauthorized)
+		return nil
 	}
 	connection, err := websocket.Accept(writer, request, &websocket.AcceptOptions{InsecureSkipVerify: options.AllowCors})
 	if err != nil {
@@ -32,9 +35,12 @@ func handleWebsocketRequest(writer http.ResponseWriter, request *http.Request, o
 	}
 	player.Notifier = notifier
 	existingPlayers := room.Players()
-	players := make([]string, 0, len(existingPlayers))
+	players := make([]playerInfo, 0, len(existingPlayers))
 	for _, p := range existingPlayers {
-		players = append(players, p.Name)
+		players = append(players, playerInfo{
+			Name:      p.Name,
+			PlayerKey: p.Key,
+		})
 	}
 	_ = wsjson.Write(request.Context(), connection, websocketMessage{
 		Topic:   "successfullyJoined",
@@ -58,14 +64,19 @@ type websocketMessage struct {
 }
 
 type initialJoinMessage struct {
-	Players []string          `json:"players"`
+	Players []playerInfo      `json:"players"`
 	Options roomUpdateMessage `json:"options"`
+}
+
+type playerInfo struct {
+	Name      string `json:"name"`
+	PlayerKey string `json:"playerKey"`
 }
 
 type roomUpdateMessage struct {
 	Area              [][2]float64 `json:"area"`
 	NumberOfQuestions int          `json:"numberOfQuestions"`
-	PlayerName        string       `json:"playerName,omitempty"`
+	PlayerKey         string       `json:"playerKey,omitempty"`
 	Errors            []string     `json:"errors"`
 }
 
@@ -73,21 +84,21 @@ type websocketNotifier struct {
 	write func(msg any)
 }
 
-func (w *websocketNotifier) NotifyPlayerJoined(name string) {
-	payload := map[string]string{"name": name}
+func (w *websocketNotifier) NotifyPlayerJoined(name string, key string) {
+	payload := map[string]string{"name": name, "playerKey": key}
 	w.write(websocketMessage{Topic: "playerJoined", Payload: payload})
 }
 
-func (w *websocketNotifier) NotifyRoomUpdated(options contest.RoomOptions, playerName string) {
-	message := convertRoomOptions(options, playerName)
+func (w *websocketNotifier) NotifyRoomUpdated(options contest.RoomOptions, playerKey string) {
+	message := convertRoomOptions(options, playerKey)
 	w.write(websocketMessage{
 		Topic:   "roomUpdated",
 		Payload: message,
 	})
 }
 
-func (w *websocketNotifier) NotifyGameStarted(player string, center contest.Coordinate) {
-	message := map[string]any{"playerName": player, "center": [2]float64{center.Lat, center.Lng}}
+func (w *websocketNotifier) NotifyGameStarted(playerKey string, center contest.Coordinate) {
+	message := map[string]any{"playerKey": playerKey, "center": [2]float64{center.Lat, center.Lng}}
 	w.write(websocketMessage{Topic: "gameStarted", Payload: message})
 }
 
@@ -117,7 +128,7 @@ func (w *websocketNotifier) NotifyQuestionResults(result contest.QuestionResult)
 	w.write(websocketMessage{Topic: "questionFinished", Payload: message})
 }
 
-func convertRoomOptions(options contest.RoomOptions, playerName string) roomUpdateMessage {
+func convertRoomOptions(options contest.RoomOptions, playerKey string) roomUpdateMessage {
 	area := make([][2]float64, 0, len(options.Area))
 	for _, coordinate := range options.Area {
 		area = append(area, [2]float64{coordinate.Lat, coordinate.Lng})
@@ -125,7 +136,7 @@ func convertRoomOptions(options contest.RoomOptions, playerName string) roomUpda
 	message := roomUpdateMessage{
 		Area:              area,
 		NumberOfQuestions: options.NumberOfQuestions,
-		PlayerName:        playerName,
+		PlayerKey:         playerKey,
 		Errors:            options.Errors(),
 	}
 	return message

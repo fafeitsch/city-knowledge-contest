@@ -17,7 +17,7 @@ type Room struct {
 	mutex           sync.RWMutex
 	Key             string
 	Creation        time.Time
-	players         []Player
+	players         map[string]*Player
 	random          *rand.Rand
 	options         RoomOptions
 	currentQuestion *Question
@@ -78,7 +78,11 @@ func (r *RoomOptions) Errors() []string {
 func (r *Room) Players() []Player {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
-	return r.players
+	result := make([]Player, 0, len(r.players))
+	for key := range r.players {
+		result = append(result, *r.players[key])
+	}
+	return result
 }
 
 func NewRoom() *Room {
@@ -86,7 +90,7 @@ func NewRoom() *Room {
 		Key:      keygen.RoomKey(),
 		Creation: time.Now(),
 		random:   rand.New(rand.NewSource(time.Now().Unix())),
-		players:  make([]Player, 0, 0),
+		players:  make(map[string]*Player),
 		options: RoomOptions{
 			Area:              []Coordinate{},
 			NumberOfQuestions: 10,
@@ -101,8 +105,8 @@ func (r *Room) Options() RoomOptions {
 func (r *Room) SetOptions(options RoomOptions, playerKey string) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
-	player := r.findPlayer(playerKey)
-	if player == nil {
+	player, ok := r.players[playerKey]
+	if !ok {
 		panic(fmt.Sprintf("player with key \"%s\" does not exist in room \"%s\"", playerKey, r.Key))
 	}
 	r.options = options
@@ -114,27 +118,19 @@ func (r *Room) SetOptions(options RoomOptions, playerKey string) {
 func (r *Room) Join(name string) Player {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
-	r.notifyPlayers(func(player Player) {
-		player.NotifyPlayerJoined(name)
+	player := Player{Name: name, Secret: keygen.PlayerKey(), Key: keygen.PlayerKey()}
+	r.notifyPlayers(func(p Player) {
+		p.NotifyPlayerJoined(player.Name, player.Key)
 	})
-	player := Player{Name: name, Key: keygen.PlayerKey()}
-	r.players = append(r.players, player)
+	r.players[player.Key] = &player
 	return player
 }
 
-func (r *Room) findPlayer(key string) *Player {
-	for index, player := range r.players {
-		if player.Key == key {
-			return &r.players[index]
-		}
-	}
-	return nil
-}
-
-func (r *Room) FindPlayer(key string) *Player {
+func (r *Room) FindPlayer(key string) (*Player, bool) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
-	return r.findPlayer(key)
+	result, ok := r.players[key]
+	return result, ok
 }
 
 func (r *Room) notifyPlayers(consumer func(Player)) {
@@ -142,7 +138,7 @@ func (r *Room) notifyPlayers(consumer func(Player)) {
 		if player.Notifier == nil {
 			continue
 		}
-		consumer(player)
+		consumer(*player)
 	}
 }
 
@@ -150,8 +146,8 @@ func (r *Room) Play(playerKey string) {
 	if len(r.options.Errors()) > 0 {
 		panic(fmt.Sprintf("can't start the game because there are still errors in its config"))
 	}
-	startPlayer := r.findPlayer(playerKey)
-	if startPlayer == nil {
+	startPlayer, ok := r.players[playerKey]
+	if !ok {
 		panic(fmt.Sprintf("player with key \"%s\" does not exist in this room", playerKey))
 	}
 	triangles := polygon(r.Options().Area).computeTriangulation()
@@ -212,8 +208,8 @@ func (r *Room) playQuestion(round int, triangles triangulation) error {
 }
 
 func (r *Room) AnswerQuestion(playerKey string, guess Coordinate) (bool, error) {
-	player := r.findPlayer(playerKey)
-	if player == nil {
+	_, ok := r.players[playerKey]
+	if !ok {
 		panic(fmt.Sprintf("player with key \"%s\" not found in this room", playerKey))
 	}
 	question := r.currentQuestion
@@ -240,8 +236,9 @@ func (r *Room) sendCountdowns(amount int, consumer func(Player) func(int)) {
 
 type Player struct {
 	Notifier
-	Key  string
-	Name string
+	Secret string
+	Key    string
+	Name   string
 }
 
 type QuestionResult struct {
@@ -252,7 +249,7 @@ type QuestionResult struct {
 }
 
 type Notifier interface {
-	NotifyPlayerJoined(string)
+	NotifyPlayerJoined(string, string)
 	NotifyRoomUpdated(RoomOptions, string)
 	NotifyGameStarted(string, Coordinate)
 	NotifyQuestionCountdown(int)

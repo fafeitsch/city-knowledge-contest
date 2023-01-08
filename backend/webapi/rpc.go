@@ -14,8 +14,9 @@ type createRoomRequest struct {
 }
 
 type createRoomResponse struct {
-	RoomKey   string `json:"roomKey"`
-	PlayerKey string `json:"playerKey"`
+	RoomKey      string `json:"roomKey"`
+	PlayerKey    string `json:"playerKey"`
+	PlayerSecret string `json:"playerSecret"`
 }
 
 func createRoom(message json.RawMessage) (func() (any, error), error) {
@@ -28,10 +29,11 @@ func createRoom(message json.RawMessage) (func() (any, error), error) {
 		player := room.Join(request.Name)
 		openRooms[room.Key] = room
 		response := createRoomResponse{
-			RoomKey:   room.Key,
-			PlayerKey: player.Key,
+			RoomKey:      room.Key,
+			PlayerKey:    player.Key,
+			PlayerSecret: player.Secret,
 		}
-		log.Printf("Created room \"%s\" from player \"%s\" (\"%s\").", room.Key, player.Key, player.Name)
+		log.Printf("Created room \"%s\" from player \"%s\" (\"%s\").", room.Key, player.Secret, player.Name)
 		return response, nil
 	}, nil
 }
@@ -41,11 +43,12 @@ type roomUpdateRequest struct {
 	NumberOfQuestions int          `json:"numberOfQuestions"`
 	RoomKey           string       `json:"roomKey"`
 	PlayerKey         string       `json:"playerKey"`
+	PlayerSecret      string       `json:"playerSecret"`
 }
 
 func updateRoom(message json.RawMessage) (func() (any, error), error) {
 	request := parseMessage[roomUpdateRequest](message)
-	room, err := validateRoomAndPlayer(request.RoomKey, request.PlayerKey)
+	room, err := validateRoomAndPlayer(request.RoomKey, request.PlayerKey, request.PlayerSecret)
 	if err != nil {
 		return nil, err
 	}
@@ -71,8 +74,9 @@ type joinRequest struct {
 }
 
 type joinResponse struct {
-	Name      string `json:"name"`
-	PlayerKey string `json:"playerKey"`
+	Name         string `json:"name"`
+	PlayerKey    string `json:"playerKey"`
+	PlayerSecret string `json:"playerSecret"`
 }
 
 func joinRoom(message json.RawMessage) (func() (any, error), error) {
@@ -84,22 +88,24 @@ func joinRoom(message json.RawMessage) (func() (any, error), error) {
 	return func() (any, error) {
 		player := room.Join(request.Name)
 		response := joinResponse{
-			Name:      player.Name,
-			PlayerKey: player.Key,
+			Name:         player.Name,
+			PlayerKey:    player.Key,
+			PlayerSecret: player.Secret,
 		}
-		log.Printf("Player \"%s\" (\"%s\") joined room \"%s\".", player.Key, player.Name, room.Key)
+		log.Printf("Player \"%s\" (\"%s\") joined room \"%s\".", player.Secret, player.Name, room.Key)
 		return response, nil
 	}, nil
 }
 
 type startGameRequest struct {
-	PlayerKey string `json:"playerKey"`
-	RoomKey   string `json:"roomKey"`
+	PlayerKey    string `json:"playerKey"`
+	PlayerSecret string `json:"playerSecret"`
+	RoomKey      string `json:"roomKey"`
 }
 
 func startGame(message json.RawMessage) (func() (any, error), error) {
 	request := parseMessage[startGameRequest](message)
-	room, err := validateRoomAndPlayer(request.RoomKey, request.PlayerKey)
+	room, err := validateRoomAndPlayer(request.RoomKey, request.PlayerKey, request.PlayerSecret)
 	if err != nil {
 		return nil, err
 	}
@@ -109,26 +115,27 @@ func startGame(message json.RawMessage) (func() (any, error), error) {
 	}, nil
 }
 
-func validateRoomAndPlayer(roomKey string, playerKey string) (*contest.Room, error) {
+func validateRoomAndPlayer(roomKey string, playerKey string, playerSecret string) (*contest.Room, error) {
 	room, ok := openRooms[roomKey]
 	if !ok {
 		return nil, fmt.Errorf("room with key \"%s\" not found", roomKey)
 	}
-	if room.FindPlayer(playerKey) == nil {
-		return nil, fmt.Errorf("player with key \"%s\" has not joined the room yet", playerKey)
+	if p, ok := room.FindPlayer(playerKey); !ok || p.Secret != playerSecret {
+		return nil, fmt.Errorf("player with key \"%s\" has not joined the room yet or secret is wrong", playerKey)
 	}
 	return room, nil
 }
 
 type guessRequest struct {
-	PlayerKey string     `json:"playerKey"`
-	RoomKey   string     `json:"roomKey"`
-	Guess     [2]float64 `json:"guess"`
+	PlayerKey    string     `json:"playerKey"`
+	PlayerSecret string     `json:"playerSecret"`
+	RoomKey      string     `json:"roomKey"`
+	Guess        [2]float64 `json:"guess"`
 }
 
 func answerQuestion(message json.RawMessage) (func() (any, error), error) {
 	request := parseMessage[guessRequest](message)
-	room, err := validateRoomAndPlayer(request.RoomKey, request.PlayerKey)
+	room, err := validateRoomAndPlayer(request.RoomKey, request.PlayerKey, request.PlayerSecret)
 	if err != nil {
 		return nil, err
 	}
