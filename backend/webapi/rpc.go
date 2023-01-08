@@ -14,9 +14,12 @@ type createRoomRequest struct {
 }
 
 type createRoomResponse struct {
-	RoomKey      string `json:"roomKey"`
-	PlayerKey    string `json:"playerKey"`
-	PlayerSecret string `json:"playerSecret"`
+	RoomKey           string       `json:"roomKey"`
+	PlayerKey         string       `json:"playerKey"`
+	PlayerSecret      string       `json:"playerSecret"`
+	NumberOfQuestions int          `json:"numberOfQuestions"`
+	Area              [][2]float64 `json:"area"`
+	Errors            []string     `json:"errors"`
 }
 
 func createRoom(message json.RawMessage) (func() (any, error), error) {
@@ -28,10 +31,17 @@ func createRoom(message json.RawMessage) (func() (any, error), error) {
 		room := contest.NewRoom()
 		player := room.Join(request.Name)
 		openRooms[room.Key] = room
+		area := make([][2]float64, 0, len(room.Options().Area))
+		for _, coordinate := range room.Options().Area {
+			area = append(area, [2]float64{coordinate.Lat, coordinate.Lng})
+		}
 		response := createRoomResponse{
-			RoomKey:      room.Key,
-			PlayerKey:    player.Key,
-			PlayerSecret: player.Secret,
+			RoomKey:           room.Key,
+			PlayerKey:         player.Key,
+			PlayerSecret:      player.Secret,
+			Errors:            room.ConfigErrors(),
+			NumberOfQuestions: room.Options().NumberOfQuestions,
+			Area:              area,
 		}
 		log.Printf("Created room \"%s\" from player \"%s\" (\"%s\").", room.Key, player.Secret, player.Name)
 		return response, nil
@@ -44,6 +54,10 @@ type roomUpdateRequest struct {
 	RoomKey           string       `json:"roomKey"`
 	PlayerKey         string       `json:"playerKey"`
 	PlayerSecret      string       `json:"playerSecret"`
+}
+
+type updateRoomResponse struct {
+	Errors []string `json:"errors"`
 }
 
 func updateRoom(message json.RawMessage) (func() (any, error), error) {
@@ -64,7 +78,9 @@ func updateRoom(message json.RawMessage) (func() (any, error), error) {
 			Area:              area,
 			NumberOfQuestions: request.NumberOfQuestions,
 		}, request.PlayerKey)
-		return map[string]any{}, nil
+		return updateRoomResponse{
+			Errors: room.ConfigErrors(),
+		}, nil
 	}, nil
 }
 
@@ -109,6 +125,10 @@ func startGame(message json.RawMessage) (func() (any, error), error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(room.ConfigErrors()) > 0 {
+		return nil, fmt.Errorf("the room is not yet configured correctly, "+
+			"it still has the following config errors: %v", room.ConfigErrors())
+	}
 	return func() (any, error) {
 		go room.Play(request.PlayerKey)
 		return map[string]any{}, nil
@@ -138,6 +158,9 @@ func answerQuestion(message json.RawMessage) (func() (any, error), error) {
 	room, err := validateRoomAndPlayer(request.RoomKey, request.PlayerKey, request.PlayerSecret)
 	if err != nil {
 		return nil, err
+	}
+	if !room.HasActiveQuestion() {
+		return nil, fmt.Errorf("question cannot be answered because there is no active question")
 	}
 	return func() (any, error) {
 		result, err := room.AnswerQuestion(request.PlayerKey, contest.Coordinate{

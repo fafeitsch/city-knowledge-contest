@@ -64,7 +64,7 @@ func HandleFunc(options Options) http.HandlerFunc {
 		}
 		processor, err := validator(request.Params)
 		if err != nil {
-			writeError(resp, -32602, request.Id, "the parameter validation for method \"%s\" failed: %v", request.Method, err)
+			writeError(resp, -32602, request.Id, "the validation for method \"%s\" failed: %v", request.Method, err)
 			return
 		}
 		result, err := processor()

@@ -64,7 +64,7 @@ func (q *Question) waitForPlayers(countdown func(int)) {
 func (r *RoomOptions) Errors() []string {
 	errors := make([]string, 0, 0)
 	if len(r.Area) < 3 {
-		errors = append(errors, "toFewCoordinates")
+		errors = append(errors, "tooFewCoordinates")
 	}
 	if r.NumberOfQuestions < 1 {
 		errors = append(errors, "numberOfQuestionsToSmall")
@@ -100,6 +100,10 @@ func NewRoom() *Room {
 
 func (r *Room) Options() RoomOptions {
 	return r.options
+}
+
+func (r *Room) ConfigErrors() []string {
+	return r.options.Errors()
 }
 
 func (r *Room) SetOptions(options RoomOptions, playerKey string) {
@@ -223,6 +227,10 @@ func (r *Room) AnswerQuestion(playerKey string, guess Coordinate) (bool, error) 
 		question.allPlayersAnswered <- true
 	}
 	return result, err
+}
+
+func (r *Room) HasActiveQuestion() bool {
+	return r.currentQuestion != nil
 }
 
 func (r *Room) sendCountdowns(amount int, consumer func(Player) func(int)) {
