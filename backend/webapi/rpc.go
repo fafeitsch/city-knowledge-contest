@@ -5,7 +5,13 @@ import (
 	"fmt"
 	"github.com/fafeitsch/city-knowledge-contest/backend/contest"
 	"log"
+	"sync"
 )
+
+type roomContainer struct {
+	sync.RWMutex
+	openRooms map[string]contest.Room
+}
 
 type rpcHandler func(message json.RawMessage) (*rpcRequestContext, error)
 
@@ -27,7 +33,7 @@ type createRoomResponse struct {
 	Errors            []string     `json:"errors"`
 }
 
-func createRoom(message json.RawMessage) (*rpcRequestContext, error) {
+func (r *roomContainer) createRoom(message json.RawMessage) (*rpcRequestContext, error) {
 	request := parseMessage[createRoomRequest](message)
 	if len(request.Name) == 0 {
 		return nil, fmt.Errorf("a player name must not be empty")
@@ -36,20 +42,22 @@ func createRoom(message json.RawMessage) (*rpcRequestContext, error) {
 		process: func() (any, error) {
 			room := contest.NewRoom()
 			player := room.Join(request.Name)
-			openRooms[room.Key] = room
+			r.Lock()
+			r.openRooms[room.Key()] = room
+			r.Unlock()
 			area := make([][2]float64, 0, len(room.Options().Area))
 			for _, coordinate := range room.Options().Area {
 				area = append(area, [2]float64{coordinate.Lat, coordinate.Lng})
 			}
 			response := createRoomResponse{
-				RoomKey:           room.Key,
+				RoomKey:           room.Key(),
 				PlayerKey:         player.Key,
 				PlayerSecret:      player.Secret,
 				Errors:            room.ConfigErrors(),
 				NumberOfQuestions: room.Options().NumberOfQuestions,
 				Area:              area,
 			}
-			log.Printf("Created room \"%s\" from player \"%s\" (\"%s\").", room.Key, player.Secret, player.Name)
+			log.Printf("Created room \"%s\" from player \"%s\" (\"%s\").", room.Key(), player.Secret, player.Name)
 			return response, nil
 		},
 	}, nil
@@ -67,9 +75,9 @@ type updateRoomResponse struct {
 	Errors []string `json:"errors"`
 }
 
-func updateRoom(message json.RawMessage) (*rpcRequestContext, error) {
+func (r *roomContainer) updateRoom(message json.RawMessage) (*rpcRequestContext, error) {
 	request := parseMessage[roomUpdateRequest](message)
-	room, err := validateRoomAndPlayer(request.RoomKey, request.PlayerKey, request.PlayerSecret)
+	room, err := r.validateRoomAndPlayer(request.RoomKey, request.PlayerKey, request.PlayerSecret)
 	if err != nil {
 		return nil, err
 	}
@@ -105,9 +113,11 @@ type joinResponse struct {
 	PlayerSecret string `json:"playerSecret"`
 }
 
-func joinRoom(message json.RawMessage) (*rpcRequestContext, error) {
+func (r *roomContainer) joinRoom(message json.RawMessage) (*rpcRequestContext, error) {
 	request := parseMessage[joinRequest](message)
-	room, ok := openRooms[request.RoomKey]
+	r.RLock()
+	room, ok := r.openRooms[request.RoomKey]
+	r.RUnlock()
 	if !ok {
 		return nil, fmt.Errorf("room with key \"%s\" not found", request.RoomKey)
 	}
@@ -120,7 +130,7 @@ func joinRoom(message json.RawMessage) (*rpcRequestContext, error) {
 				PlayerKey:    player.Key,
 				PlayerSecret: player.Secret,
 			}
-			log.Printf("Player \"%s\" (\"%s\") joined room \"%s\".", player.Secret, player.Name, room.Key)
+			log.Printf("Player \"%s\" (\"%s\") joined room \"%s\".", player.Secret, player.Name, room.Key())
 			return response, nil
 		},
 		release: unlockRoom(room),
@@ -133,9 +143,9 @@ type startGameRequest struct {
 	RoomKey      string `json:"roomKey"`
 }
 
-func startGame(message json.RawMessage) (*rpcRequestContext, error) {
+func (r *roomContainer) startGame(message json.RawMessage) (*rpcRequestContext, error) {
 	request := parseMessage[startGameRequest](message)
-	room, err := validateRoomAndPlayer(request.RoomKey, request.PlayerKey, request.PlayerSecret)
+	room, err := r.validateRoomAndPlayer(request.RoomKey, request.PlayerKey, request.PlayerSecret)
 	if err != nil {
 		return &rpcRequestContext{release: unlockRoom(room)}, err
 	}
@@ -152,13 +162,15 @@ func startGame(message json.RawMessage) (*rpcRequestContext, error) {
 	}, nil
 }
 
-func validateRoomAndPlayer(roomKey string, playerKey string, playerSecret string) (*contest.Room, error) {
-	room, ok := openRooms[roomKey]
+func (r *roomContainer) validateRoomAndPlayer(roomKey string, playerKey string, secret string) (contest.Room, error) {
+	r.RLock()
+	room, ok := r.openRooms[roomKey]
+	r.RUnlock()
 	if !ok {
 		return nil, fmt.Errorf("room with key \"%s\" not found", roomKey)
 	}
 	room.Lock()
-	if p, ok := room.FindPlayer(playerKey); !ok || p.Secret != playerSecret {
+	if p, ok := room.FindPlayer(playerKey); !ok || p.Secret != secret {
 		return nil, fmt.Errorf("player with key \"%s\" has not joined the room yet or secret is wrong", playerKey)
 	}
 	return room, nil
@@ -171,9 +183,9 @@ type guessRequest struct {
 	Guess        [2]float64 `json:"guess"`
 }
 
-func answerQuestion(message json.RawMessage) (*rpcRequestContext, error) {
+func (r *roomContainer) answerQuestion(message json.RawMessage) (*rpcRequestContext, error) {
 	request := parseMessage[guessRequest](message)
-	room, err := validateRoomAndPlayer(request.RoomKey, request.PlayerKey, request.PlayerSecret)
+	room, err := r.validateRoomAndPlayer(request.RoomKey, request.PlayerKey, request.PlayerSecret)
 	if err != nil {
 		return &rpcRequestContext{release: unlockRoom(room)}, err
 	}
@@ -196,9 +208,9 @@ func answerQuestion(message json.RawMessage) (*rpcRequestContext, error) {
 	}, nil
 }
 
-func advanceGame(message json.RawMessage) (*rpcRequestContext, error) {
+func (r *roomContainer) advanceGame(message json.RawMessage) (*rpcRequestContext, error) {
 	request := parseMessage[startGameRequest](message)
-	room, err := validateRoomAndPlayer(request.RoomKey, request.PlayerKey, request.PlayerSecret)
+	room, err := r.validateRoomAndPlayer(request.RoomKey, request.PlayerKey, request.PlayerSecret)
 	if err != nil {
 		return &rpcRequestContext{release: unlockRoom(room)}, err
 	}
@@ -213,7 +225,13 @@ func advanceGame(message json.RawMessage) (*rpcRequestContext, error) {
 	}, err
 }
 
-func unlockRoom(room *contest.Room) func() {
+func parseMessage[K any](message json.RawMessage) K {
+	var request K
+	_ = json.Unmarshal(message, &request)
+	return request
+}
+
+func unlockRoom(room contest.Room) func() {
 	return func() {
 		if room != nil {
 			room.Unlock()

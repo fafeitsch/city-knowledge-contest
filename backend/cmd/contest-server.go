@@ -69,7 +69,7 @@ func main() {
 		Flags:           []cli.Flag{portFlag, allowCorsFlag, playerKeyLengthFlag, roomKeyLengthFlag, osrmServerFlag},
 		HideHelpCommand: true,
 		Action: func(context *cli.Context) error {
-			handler := webapi.HandleFunc(webapi.Options{AllowCors: allowCors})
+			handler := webapi.New(webapi.Options{AllowCors: allowCors})
 			keygen.SetPlayerKeyLength(playerKeyLength)
 			keygen.SetRoomKeyLength(roomKeyLength)
 			contest.OsrmServer = osrmServer

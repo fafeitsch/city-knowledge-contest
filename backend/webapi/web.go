@@ -10,76 +10,83 @@ import (
 	"strings"
 )
 
-var openRooms = make(map[string]*contest.Room)
-
-func parseMessage[K any](message json.RawMessage) K {
-	var request K
-	_ = json.Unmarshal(message, &request)
-	return request
+type RpcServer struct {
+	methods  map[string]rpcHandler
+	options  Options
+	upgrader func(w http.ResponseWriter, req *http.Request) error
 }
 
-func HandleFunc(options Options) http.HandlerFunc {
+func New(options Options) *RpcServer {
+	roomContainer := roomContainer{openRooms: make(map[string]contest.Room)}
 	methods := map[string]rpcHandler{
-		"createRoom":     createRoom,
-		"updateRoom":     updateRoom,
-		"joinRoom":       joinRoom,
-		"startGame":      startGame,
-		"answerQuestion": answerQuestion,
-		"advanceGame":    advanceGame,
+		"createRoom":     roomContainer.createRoom,
+		"updateRoom":     roomContainer.updateRoom,
+		"joinRoom":       roomContainer.joinRoom,
+		"startGame":      roomContainer.startGame,
+		"answerQuestion": roomContainer.answerQuestion,
+		"advanceGame":    roomContainer.advanceGame,
 	}
-	return func(resp http.ResponseWriter, req *http.Request) {
-		if options.AllowCors {
-			setCorsHeaders(resp)
-		}
-		if req.Method == "OPTIONS" {
-			return
-		}
-		if req.Header.Get("Upgrade") == "websocket" {
-			err := handleWebsocketRequest(resp, req, options)
-			if err != nil {
-				fmt.Printf("%v", err)
-				resp.WriteHeader(http.StatusInternalServerError)
-			}
-			return
-		}
-		if req.Method != "POST" {
-			resp.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-		parts := strings.Split(req.RequestURI, "/")
-		if len(parts) != 2 || parts[1] != "rpc" {
-			resp.WriteHeader(http.StatusNotFound)
-			return
-		}
-		var request Request
-		defer handlePanic(resp, request)
-		err := json.NewDecoder(req.Body).Decode(&request)
-		if err != nil {
-			writeError(resp, -32700, nil, "could not parse JSON-RPC request: %v", err)
-			return
-		}
-		validator, ok := methods[request.Method]
-		if !ok {
-			writeError(resp, -32601, request.Id, "the requested method \"%s\" was not found", request.Method)
-			return
-		}
-		rpcRequest, err := validator(request.Params)
-		if rpcRequest != nil && rpcRequest.release != nil {
-			defer rpcRequest.release()
-		}
-		if err != nil {
-			writeError(resp, -32602, request.Id, "the validation for method \"%s\" failed: %v", request.Method, err)
-			return
-		}
-		result, err := rpcRequest.process()
-		if err != nil {
-			writeError(resp, -32603, request.Id, "execution of method \"%s\" failed: %v", request.Method, err)
-			return
-		}
-		jsonResult, _ := json.Marshal(result)
-		response := Response{Id: request.Id, Jsonrpc: "2.0", Result: jsonResult}
-		_ = json.NewEncoder(resp).Encode(response)
+	return &RpcServer{
+		methods: methods,
+		options: options,
+		upgrader: func(resp http.ResponseWriter, req *http.Request) error {
+			return roomContainer.upgradeToWebSocket(resp, req, options)
+		},
 	}
+}
+
+func (r *RpcServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+	if r.options.AllowCors {
+		setCorsHeaders(resp)
+	}
+	if req.Method == "OPTIONS" {
+		return
+	}
+	if req.Header.Get("Upgrade") == "websocket" {
+		err := r.upgrader(resp, req)
+		if err != nil {
+			fmt.Printf("%v", err)
+			resp.WriteHeader(http.StatusInternalServerError)
+		}
+		return
+	}
+	if req.Method != "POST" {
+		resp.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	parts := strings.Split(req.RequestURI, "/")
+	if len(parts) != 2 || parts[1] != "rpc" {
+		resp.WriteHeader(http.StatusNotFound)
+		return
+	}
+	var request Request
+	defer handlePanic(resp, request)
+	err := json.NewDecoder(req.Body).Decode(&request)
+	if err != nil {
+		writeError(resp, -32700, nil, "could not parse JSON-RPC request: %v", err)
+		return
+	}
+	validator, ok := r.methods[request.Method]
+	if !ok {
+		writeError(resp, -32601, request.Id, "the requested method \"%s\" was not found", request.Method)
+		return
+	}
+	rpcRequest, err := validator(request.Params)
+	if rpcRequest != nil && rpcRequest.release != nil {
+		defer rpcRequest.release()
+	}
+	if err != nil {
+		writeError(resp, -32602, request.Id, "the validation for method \"%s\" failed: %v", request.Method, err)
+		return
+	}
+	result, err := rpcRequest.process()
+	if err != nil {
+		writeError(resp, -32603, request.Id, "execution of method \"%s\" failed: %v", request.Method, err)
+		return
+	}
+	jsonResult, _ := json.Marshal(result)
+	response := Response{Id: request.Id, Jsonrpc: "2.0", Result: jsonResult}
+	_ = json.NewEncoder(resp).Encode(response)
 }
 
 func setCorsHeaders(resp http.ResponseWriter) {

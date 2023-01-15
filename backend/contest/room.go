@@ -15,9 +15,26 @@ type Coordinate struct {
 	Lng float64
 }
 
-type Room struct {
+type Room interface {
+	Lock()
+	Unlock()
+	Players() []Player
+	Options() RoomOptions
+	ConfigErrors() []string
+	SetOptions(RoomOptions, string)
+	Join(string) Player
+	FindPlayer(string) (*Player, bool)
+	Play(string)
+	AnswerQuestion(string, Coordinate) (int, error)
+	HasActiveQuestion() bool
+	CanBeAdvanced() bool
+	AdvanceToNextQuestion()
+	Key() string
+}
+
+type roomImpl struct {
 	mutex           sync.Mutex
-	Key             string
+	key             string
 	Creation        time.Time
 	players         map[string]*Player
 	points          map[string]int
@@ -25,6 +42,10 @@ type Room struct {
 	options         RoomOptions
 	currentQuestion *Question
 	advanceGame     chan bool
+}
+
+func (r *roomImpl) Key() string {
+	return r.key
 }
 
 type RoomOptions struct {
@@ -80,15 +101,15 @@ func (r *RoomOptions) Errors() []string {
 	return errors
 }
 
-func (r *Room) Lock() {
+func (r *roomImpl) Lock() {
 	r.mutex.Lock()
 }
 
-func (r *Room) Unlock() {
+func (r *roomImpl) Unlock() {
 	r.mutex.Unlock()
 }
 
-func (r *Room) Players() []Player {
+func (r *roomImpl) Players() []Player {
 	result := make([]Player, 0, len(r.players))
 	for key := range r.players {
 		result = append(result, *r.players[key])
@@ -96,9 +117,9 @@ func (r *Room) Players() []Player {
 	return result
 }
 
-func NewRoom() *Room {
-	return &Room{
-		Key:      keygen.RoomKey(),
+func NewRoom() Room {
+	return &roomImpl{
+		key:      keygen.RoomKey(),
 		Creation: time.Now(),
 		random:   rand.New(rand.NewSource(time.Now().Unix())),
 		players:  make(map[string]*Player),
@@ -109,15 +130,15 @@ func NewRoom() *Room {
 	}
 }
 
-func (r *Room) Options() RoomOptions {
+func (r *roomImpl) Options() RoomOptions {
 	return r.options
 }
 
-func (r *Room) ConfigErrors() []string {
+func (r *roomImpl) ConfigErrors() []string {
 	return r.options.Errors()
 }
 
-func (r *Room) SetOptions(options RoomOptions, playerKey string) {
+func (r *roomImpl) SetOptions(options RoomOptions, playerKey string) {
 	player, ok := r.players[playerKey]
 	if !ok {
 		panic(fmt.Sprintf("player with key \"%s\" does not exist in room \"%s\"", playerKey, r.Key))
@@ -128,7 +149,7 @@ func (r *Room) SetOptions(options RoomOptions, playerKey string) {
 	})
 }
 
-func (r *Room) Join(name string) Player {
+func (r *roomImpl) Join(name string) Player {
 	player := Player{Name: name, Secret: keygen.PlayerKey(), Key: keygen.PlayerKey()}
 	r.notifyPlayers(func(p Player) {
 		p.NotifyPlayerJoined(player.Name, player.Key)
@@ -137,12 +158,12 @@ func (r *Room) Join(name string) Player {
 	return player
 }
 
-func (r *Room) FindPlayer(key string) (*Player, bool) {
+func (r *roomImpl) FindPlayer(key string) (*Player, bool) {
 	result, ok := r.players[key]
 	return result, ok
 }
 
-func (r *Room) notifyPlayers(consumer func(Player)) {
+func (r *roomImpl) notifyPlayers(consumer func(Player)) {
 	for _, player := range r.players {
 		if player.Notifier == nil {
 			continue
@@ -151,7 +172,7 @@ func (r *Room) notifyPlayers(consumer func(Player)) {
 	}
 }
 
-func (r *Room) Play(playerKey string) {
+func (r *roomImpl) Play(playerKey string) {
 	if len(r.options.Errors()) > 0 {
 		panic(fmt.Sprintf("can't start the game because there are still errors in its config"))
 	}
@@ -188,7 +209,7 @@ func (r *Room) Play(playerKey string) {
 	}()
 }
 
-func (r *Room) playQuestion(round int, triangles triangulation) error {
+func (r *roomImpl) playQuestion(round int, triangles triangulation) error {
 	question := ""
 	solution := Coordinate{}
 	tries := 0
@@ -244,7 +265,7 @@ func (r *Room) playQuestion(round int, triangles triangulation) error {
 	return nil
 }
 
-func (r *Room) AnswerQuestion(playerKey string, guess Coordinate) (int, error) {
+func (r *roomImpl) AnswerQuestion(playerKey string, guess Coordinate) (int, error) {
 	_, ok := r.players[playerKey]
 	if !ok {
 		panic(fmt.Sprintf("player with key \"%s\" not found in this room", playerKey))
@@ -264,19 +285,19 @@ func (r *Room) AnswerQuestion(playerKey string, guess Coordinate) (int, error) {
 	return question.points[playerKey], err
 }
 
-func (r *Room) HasActiveQuestion() bool {
+func (r *roomImpl) HasActiveQuestion() bool {
 	return r.currentQuestion != nil
 }
 
-func (r *Room) CanBeAdvanced() bool {
+func (r *roomImpl) CanBeAdvanced() bool {
 	return r.advanceGame != nil
 }
 
-func (r *Room) AdvanceToNextQuestion() {
+func (r *roomImpl) AdvanceToNextQuestion() {
 	r.advanceGame <- true
 }
 
-func (r *Room) sendCountdowns(amount int, consumer func(Player) func(int)) {
+func (r *roomImpl) sendCountdowns(amount int, consumer func(Player) func(int)) {
 	for i := 0; i < amount; i++ {
 		r.notifyPlayers(func(player Player) {
 			consumer(player)(amount - i - 1)

@@ -11,9 +11,11 @@ import (
 	"time"
 )
 
-func handleWebsocketRequest(writer http.ResponseWriter, request *http.Request, options Options) error {
+func (r *roomContainer) upgradeToWebSocket(writer http.ResponseWriter, request *http.Request, options Options) error {
 	parts := strings.Split(request.RequestURI, "/")
-	room, roomExists := openRooms[parts[2]]
+	r.RLock()
+	room, roomExists := r.openRooms[parts[2]]
+	r.RUnlock()
 	if len(parts) != 4 || !roomExists {
 		writer.WriteHeader(http.StatusNotFound)
 		return nil
