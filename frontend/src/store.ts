@@ -1,33 +1,57 @@
 import { BehaviorSubject, distinctUntilChanged, map } from "rxjs";
 
 export enum GameState {
-  SetupUsername,
-  SetupMap,
-  Waiting,
-  Started,
-  QuestionCountdown,
-  Question,
-  Finished,
+  SetupUsername = "SetupUsername",
+  SetupMap = "SetupMap",
+  Waiting = "Waiting",
+  Started = "Started",
+  QuestionCountdown = "QuestionCountdown",
+  Question = "Question",
+  Finished = "Finished",
 }
+
+export type Game = {
+  playerKey: string;
+  playerSecret: string;
+  roomId: string;
+};
+
+export type Player = { name: string; playerKey: string };
+
+export type GameResult = {
+  delta: Record<string, number>;
+  points: Record<string, number>;
+  question: string;
+  solution: {
+    lat: number;
+    lon: number;
+  };
+};
 
 interface State {
   roomId: string | undefined;
   username: string | undefined;
   playerKey: string | undefined;
+  playerSecret: string | undefined;
   gameState: GameState;
-  players: string[];
+  players: Player[];
   countdownValue: string;
   question: string;
+  game: Game | undefined;
+  gameResult: GameResult | undefined;
 }
 
 const state: State = {
   roomId: undefined,
   username: undefined,
   playerKey: undefined,
+  playerSecret: undefined,
   countdownValue: undefined,
   gameState: GameState.SetupUsername,
   players: [],
   question: undefined,
+  game: undefined,
+  gameResult: undefined,
 };
 
 const state$ = new BehaviorSubject<State>(state);
@@ -46,6 +70,10 @@ export default {
       map((state) => state.playerKey),
       distinctUntilChanged()
     ),
+    playerSecret$: state$.pipe(
+      map((state) => state.playerSecret),
+      distinctUntilChanged()
+    ),
     gameState$: state$.pipe(
       map((state) => state.gameState),
       distinctUntilChanged()
@@ -60,6 +88,14 @@ export default {
     ),
     question$: state$.pipe(
       map((state) => state.question),
+      distinctUntilChanged()
+    ),
+    game$: state$.pipe(
+      map((state) => state.game),
+      distinctUntilChanged()
+    ),
+    gameResult$: state$.pipe(
+      map((state) => state.gameResult),
       distinctUntilChanged()
     ),
   },
@@ -82,19 +118,25 @@ export default {
         playerKey,
       });
     },
+    playerSecret(playerSecret: string | undefined) {
+      state$.next({
+        ...state$.value,
+        playerSecret,
+      });
+    },
     gameState(gameState: GameState) {
       state$.next({
         ...state$.value,
         gameState,
       });
     },
-    players(players: string[]) {
+    players(players: Player[]) {
       state$.next({
         ...state$.value,
         players,
       });
     },
-    addPlayer(player: string) {
+    addPlayer(player: Player) {
       const newPlayers = [...state$.value.players, player];
       state$.next({
         ...state$.value,
@@ -111,6 +153,18 @@ export default {
       state$.next({
         ...state$.value,
         question,
+      });
+    },
+    game(game: Game) {
+      state$.next({
+        ...state$.value,
+        game,
+      });
+    },
+    gameResult(gameResult: GameResult) {
+      state$.next({
+        ...state$.value,
+        gameResult,
       });
     },
   },

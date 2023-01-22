@@ -3,16 +3,12 @@
   import Button from "../components/Button.svelte";
   import Input from "../components/Input.svelte";
   import store, { GameState } from "../store";
+  import { handleRPCRequest } from "../rpc";
 
   type RoomResult = {
     roomKey: string;
     playerKey: string;
-  };
-
-  type Response<T> = {
-    jsonrpc: string;
-    result: T;
-    id: null;
+    playerSecret: string;
   };
 
   let username = "";
@@ -40,40 +36,34 @@
   }
 
   function createRoom() {
-    fetch("http://localhost:23123/rpc", {
-      method: "POST",
-      body: JSON.stringify({
-        method: "createRoom",
-        params: {
-          name: username,
-        },
-      }),
-    })
-      .then((response) => response.json())
-      .then((data: Response<RoomResult>) => {
-        store.set.roomId(data.result.roomKey);
-        store.set.playerKey(data.result.playerKey);
-        store.set.gameState(GameState.Waiting);
+    handleRPCRequest<{ name: string }, RoomResult>({
+      method: "createRoom",
+      params: { name: username },
+    }).then((data) => {
+      store.set.game({
+        playerKey: data.result.playerKey,
+        playerSecret: data.result.playerSecret,
+        roomId: data.result.roomKey,
       });
+      store.set.gameState(GameState.Waiting);
+    });
   }
 
   function joinRoom() {
-    fetch("http://localhost:23123/rpc", {
-      method: "POST",
-      body: JSON.stringify({
-        method: "joinRoom",
-        params: {
-          name: username,
-          roomKey: roomId,
-        },
-      }),
-    })
-      .then((response) => response.json())
-      .then((data: Response<RoomResult>) => {
-        store.set.roomId(roomId);
-        store.set.playerKey(data.result.playerKey);
-        store.set.gameState(GameState.Waiting);
+    handleRPCRequest<{ name: string; roomKey: string }, RoomResult>({
+      method: "joinRoom",
+      params: {
+        name: username,
+        roomKey: roomId,
+      },
+    }).then((data) => {
+      store.set.game({
+        playerKey: data.result.playerKey,
+        playerSecret: data.result.playerSecret,
+        roomId,
       });
+      store.set.gameState(GameState.Waiting);
+    });
   }
 </script>
 

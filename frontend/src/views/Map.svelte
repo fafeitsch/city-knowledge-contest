@@ -1,47 +1,77 @@
 <script lang="ts">
   import L, { LatLng, latLng } from "leaflet";
   import { onMount } from "svelte";
-  import { GameState } from "../store";
+  import { GameState, type Game, type GameResult } from "../store";
   import store from "../store";
   import { combineLatest } from "rxjs";
+  import { handleRPCRequest } from "../rpc";
+  import Button from "../components/Button.svelte";
 
   let map;
   let gameState: GameState;
   let countdownValue: string;
   let question: string;
-  let playerKey: string;
-  let roomKey: string;
+  let game: Game;
+  let points: number | undefined;
+  let gameResult: GameResult | undefined;
+
+  type AnswerQuestion = {
+    points: number;
+  };
 
   onMount(() => {
     combineLatest([
       store.get.gameState$,
       store.get.countdownValue$,
       store.get.question$,
-      store.get.playerKey$,
-      store.get.roomId$,
+      store.get.game$,
+      store.get.gameResult$,
     ]).subscribe(
-      ([gameState$, countdownValue$, question$, playerKey$, roomId$]) => {
+      ([gameState$, countdownValue$, question$, game$, gameResult$]) => {
         gameState = gameState$;
         countdownValue = countdownValue$;
         question = question$;
-        playerKey = playerKey$;
-        roomKey = roomId$;
+        game = game$;
+        gameResult = gameResult$;
       }
     );
   });
 
   function answerQuestion(guess: LatLng) {
-    fetch("http://localhost:23123/rpc", {
-      method: "POST",
-      body: JSON.stringify({
-        method: "answerQuestion",
-        params: {
-          playerKey,
-          roomKey,
-          guess: [guess.lat, guess.lng],
-        },
-      }),
-    }).then((response) => response.json());
+    handleRPCRequest<
+      {
+        playerKey: string;
+        roomKey: string;
+        playerSecret: string;
+        guess: Array<number>;
+      },
+      AnswerQuestion
+    >({
+      method: "answerQuestion",
+      params: {
+        playerKey: game.playerKey,
+        roomKey: game.roomId,
+        playerSecret: game.playerSecret,
+        guess: [guess.lat, guess.lng],
+      },
+    }).then((data) => {
+      points = data.result.points;
+      store.set.gameState(GameState.Finished);
+    });
+  }
+
+  function advanceGame(game: Game) {
+    handleRPCRequest<
+      { playerKey: string; playerSecret: string; roomKey: string },
+      {}
+    >({
+      method: "advanceGame",
+      params: {
+        playerKey: game.playerKey,
+        playerSecret: game.playerSecret,
+        roomKey: game.roomId,
+      },
+    }).then((data) => console.log(data));
   }
 
   function createMap(container) {
@@ -77,8 +107,20 @@
   {/if}
   <div class="map" style="height:100vh;width:100vw" use:mapAction />
   {#if gameState === GameState.Question}
-    <div class="question">
+    <div class="container">
       <div>Suche den Ort {question}</div>
+    </div>
+  {:else if gameState === GameState.Finished}
+    <div class="container">
+      <div
+        class="d-flex justify-content-spaced align-items-center width-100 p-4"
+      >
+        <div>Punkte: {points}</div>
+        <div>{JSON.stringify(gameResult)}</div>
+        {#if gameResult !== undefined}
+          <Button on:click={() => advanceGame(game)} title="Weiter" />
+        {/if}
+      </div>
     </div>
   {/if}
 </div>
@@ -100,7 +142,7 @@
     font-size: 128px;
   }
 
-  .question {
+  .container {
     z-index: 999;
     position: absolute;
     bottom: 0;

@@ -20,12 +20,12 @@ func (r *roomContainer) upgradeToWebSocket(writer http.ResponseWriter, request *
 		writer.WriteHeader(http.StatusNotFound)
 		return nil
 	}
-	secret := request.Header.Get("ckc-player-secret")
-	player, ok := room.FindPlayer(parts[3])
-	if !ok || player.Secret != secret {
-		writer.WriteHeader(http.StatusUnauthorized)
-		return nil
-	}
+	// secret := request.Header.Get("ckc-player-secret")
+	player, _ := room.FindPlayer(parts[3])
+	// if !ok || player.Secret != secret {
+	// 	writer.WriteHeader(http.StatusUnauthorized)
+	// 	return nil
+	// }
 	connection, err := websocket.Accept(writer, request, &websocket.AcceptOptions{InsecureSkipVerify: options.AllowCors})
 	if err != nil {
 		return fmt.Errorf("could not upgrade to websockets: %v", err)

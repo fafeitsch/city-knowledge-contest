@@ -1,8 +1,9 @@
 <script lang="ts">
   export let placeholder: string;
+  export let value: string = "";
 </script>
 
-<input {placeholder} on:change />
+<input {placeholder} on:change {value} />
 
 <style lang="scss">
   @import "../styles/variables";
