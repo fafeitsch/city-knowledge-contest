@@ -1,22 +1,9 @@
 <script lang="ts">
-  import { combineLatest } from "rxjs";
-  import { onMount } from "svelte";
-  import Avatar from "../components/Avatar.svelte";
   import Button from "../components/Button.svelte";
   import { handleRPCRequest } from "../rpc";
   import store, { GameState, type Game, type Player } from "../store";
 
-  let game: Game = undefined;
-  let players: Player[] = [];
-
-  onMount(() => {
-    combineLatest([store.get.players$, store.get.game$]).subscribe(
-      ([players$, game$]) => {
-        game = game$;
-        players = players$;
-      }
-    );
-  });
+  let game = store.get.game$;
 
   function startGame() {
     handleRPCRequest<
@@ -55,9 +42,9 @@
           [49.794453, 9.892845],
         ],
         numberOfQuestions: 10,
-        playerKey: game.playerKey,
-        roomKey: game.roomId,
-        playerSecret: game.playerSecret,
+        playerKey: $game.playerKey,
+        roomKey: $game.roomId,
+        playerSecret: $game.playerSecret,
       },
     }).then(() => {
       handleRPCRequest<
@@ -66,9 +53,9 @@
       >({
         method: "startGame",
         params: {
-          playerKey: game.playerKey,
-          roomKey: game.roomId,
-          playerSecret: game.playerSecret,
+          playerKey: $game.playerKey,
+          roomKey: $game.roomId,
+          playerSecret: $game.playerSecret,
         },
       }).then(() => {
         store.set.gameState(GameState.Started);
@@ -76,12 +63,6 @@
     });
   }
 </script>
-
-<div class="p-3 position-absolute top-0 right-0">
-  <div class="d-flex gap-3 align-items-cente4">
-    {#each players as player}<Avatar name={player.name} />{/each}
-  </div>
-</div>
 
 <div class="d-flex flex-column align-items-center gap-5">
   <div class="old-font fs-large">Gleich geht das Spiel los …</div>

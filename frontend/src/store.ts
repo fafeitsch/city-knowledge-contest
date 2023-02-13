@@ -1,4 +1,5 @@
 import { BehaviorSubject, distinctUntilChanged, map } from "rxjs";
+import Players from "./views/Players.svelte";
 
 export enum GameState {
   SetupUsername = "SetupUsername",
@@ -16,7 +17,12 @@ export type Game = {
   roomId: string;
 };
 
-export type Player = { name: string; playerKey: string };
+export type Player = {
+  name: string;
+  playerKey: string;
+  points: number | undefined;
+  delta: number | undefined;
+};
 
 export type GameResult = {
   delta: Record<string, number>;
@@ -138,6 +144,19 @@ export default {
     },
     addPlayer(player: Player) {
       const newPlayers = [...state$.value.players, player];
+      state$.next({
+        ...state$.value,
+        players: newPlayers,
+      });
+    },
+    updatePlayerRanking(gameResult: GameResult) {
+      const newPlayers = state$.value.players
+        .map((player) => {
+          return { ...player, points: gameResult.points[player.playerKey] };
+        })
+        .sort((playerA, playerB) => {
+          return playerA.points > playerB.points ? -1 : 1;
+        });
       state$.next({
         ...state$.value,
         players: newPlayers,

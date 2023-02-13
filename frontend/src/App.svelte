@@ -1,9 +1,8 @@
 <script lang="ts">
   import Login from "./views/Login.svelte";
   import store, { GameState } from "./store";
-  import WaitingRoom from "./views/WaitingRoom.svelte";
-  import Map from "./views/Map.svelte";
   import { combineLatest } from "rxjs";
+  import Game from "./views/Game.svelte";
 
   let gameState: GameState;
   store.get.gameState$.subscribe((state) => {
@@ -36,6 +35,7 @@
           } else if (data.topic === "questionFinished") {
             store.set.gameState(GameState.Finished);
             store.set.gameResult(data.payload);
+            store.set.updatePlayerRanking(data.payload);
           }
         };
       }
@@ -44,19 +44,15 @@
   initWebSocket();
 </script>
 
-<main>
-  {#if gameState === GameState.SetupUsername || gameState === GameState.SetupMap}
-    <div class="d-flex flex-column gap-4 align-items-center">
-      <h1 class="old-font">City Knowledge Contest</h1>
-      <p class="mb-5 fs-large">Wer findet die gesuchten Orte am schnellsten?</p>
-      <Login />
-    </div>
-  {:else if gameState === GameState.Waiting}
-    <WaitingRoom />
-  {:else}
-    <Map />
-  {/if}
-</main>
+{#if gameState === GameState.SetupUsername || gameState === GameState.SetupMap}
+  <div class="d-flex flex-column gap-4 align-items-center">
+    <h1 class="old-font">City Knowledge Contest</h1>
+    <p class="mb-5 fs-large">Wer findet die gesuchten Orte am schnellsten?</p>
+    <Login />
+  </div>
+{:else}
+  <Game />
+{/if}
 
 <footer>
   <div class="p-3">Fancy Footer | License</div>

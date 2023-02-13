@@ -1,41 +1,22 @@
 <script lang="ts">
   import L, { LatLng, latLng } from "leaflet";
-  import { onMount } from "svelte";
-  import { GameState, type Game, type GameResult } from "../store";
+  import { GameState, type Game } from "../store";
   import store from "../store";
-  import { combineLatest } from "rxjs";
   import { handleRPCRequest } from "../rpc";
   import Button from "../components/Button.svelte";
 
   let map;
-  let gameState: GameState;
-  let countdownValue: string;
-  let question: string;
-  let game: Game;
-  let points: number | undefined;
-  let gameResult: GameResult | undefined;
+  let gameState = store.get.gameState$;
+  let countdownValue = store.get.countdownValue$;
+  let question = store.get.question$;
+  let game = store.get.game$;
+  let gameResult = store.get.gameResult$;
+
+  let currentResult: number = 0;
 
   type AnswerQuestion = {
     points: number;
   };
-
-  onMount(() => {
-    combineLatest([
-      store.get.gameState$,
-      store.get.countdownValue$,
-      store.get.question$,
-      store.get.game$,
-      store.get.gameResult$,
-    ]).subscribe(
-      ([gameState$, countdownValue$, question$, game$, gameResult$]) => {
-        gameState = gameState$;
-        countdownValue = countdownValue$;
-        question = question$;
-        game = game$;
-        gameResult = gameResult$;
-      }
-    );
-  });
 
   function answerQuestion(guess: LatLng) {
     handleRPCRequest<
@@ -49,13 +30,13 @@
     >({
       method: "answerQuestion",
       params: {
-        playerKey: game.playerKey,
-        roomKey: game.roomId,
-        playerSecret: game.playerSecret,
+        playerKey: $game.playerKey,
+        roomKey: $game.roomId,
+        playerSecret: $game.playerSecret,
         guess: [guess.lat, guess.lng],
       },
     }).then((data) => {
-      points = data.result.points;
+      currentResult = data.result.points;
       store.set.gameState(GameState.Finished);
     });
   }
@@ -101,24 +82,27 @@
   }
 </script>
 
-<div style="position: relative;">
-  {#if gameState === GameState.QuestionCountdown}
-    <div class="overlay">{countdownValue}</div>
+<div>
+  {#if $gameState === GameState.QuestionCountdown}
+    <div class="overlay">{$countdownValue}</div>
   {/if}
-  <div class="map" style="height:100vh;width:100vw" use:mapAction />
-  {#if gameState === GameState.Question}
+  <div class="map full-viewheight full-viewwidth" use:mapAction />
+  {#if $gameState === GameState.Question}
     <div class="container">
-      <div>Suche den Ort {question}</div>
+      <div>Suche den Ort {$question}</div>
     </div>
-  {:else if gameState === GameState.Finished}
+  {:else if $gameState === GameState.Finished}
     <div class="container">
       <div
         class="d-flex justify-content-spaced align-items-center width-100 p-4"
       >
-        <div>Punkte: {points}</div>
-        <div>{JSON.stringify(gameResult)}</div>
+        {#if currentResult !== 0}
+          <div>Richtig 🥳</div>
+        {:else}
+          <div>Leider falsch 🤷</div>
+        {/if}
         {#if gameResult !== undefined}
-          <Button on:click={() => advanceGame(game)} title="Weiter" />
+          <Button on:click={() => advanceGame($game)} title="Weiter" />
         {/if}
       </div>
     </div>

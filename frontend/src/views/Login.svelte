@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount } from "svelte";
   import Button from "../components/Button.svelte";
   import Input from "../components/Input.svelte";
   import store, { GameState } from "../store";
@@ -13,13 +12,7 @@
 
   let username = "";
   let roomId = "";
-  let gameState: GameState;
-
-  onMount(() => {
-    store.get.gameState$.subscribe((value) => {
-      gameState = value;
-    });
-  });
+  let gameState = store.get.gameState$;
 
   function handleUsernameChange(event: Event) {
     const target = event.target as HTMLInputElement;
@@ -67,7 +60,7 @@
   }
 </script>
 
-{#if gameState === GameState.SetupUsername}
+{#if $gameState === GameState.SetupUsername}
   <div class="d-flex flex-column gap-3 align-items-center">
     <Input
       on:change={handleUsernameChange}
@@ -75,7 +68,7 @@
     />
     <Button on:click={handleOnClick} title="Los geht's" />
   </div>
-{:else if gameState === GameState.SetupMap}
+{:else if $gameState === GameState.SetupMap}
   <div class="d-flex gap-5 align-items-center">
     <div class="d-flex flex-column gap-2 align-items-center">
       <Input on:change={handleRoomIdChange} placeholder="Karten-ID eingeben" />
