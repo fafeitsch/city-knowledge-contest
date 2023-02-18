@@ -51,6 +51,7 @@ func (r *roomImpl) Key() string {
 type RoomOptions struct {
 	Area              []Coordinate
 	NumberOfQuestions int
+	MaxAnswerTime     time.Duration
 }
 
 type Question struct {
@@ -62,10 +63,10 @@ type Question struct {
 	duration           time.Duration
 }
 
-func (q *Question) waitForPlayers(questionTimeout time.Duration, countdown func(int)) {
-	t2 := time.NewTimer(questionTimeout - (1 * time.Second))
-	t1 := time.NewTimer(questionTimeout - (2 * time.Second))
-	finish := time.NewTimer(questionTimeout)
+func (q *Question) waitForPlayers(countdown func(int)) {
+	t2 := time.NewTimer(q.duration - (1 * time.Second))
+	t1 := time.NewTimer(q.duration - (2 * time.Second))
+	finish := time.NewTimer(q.duration)
 	finished := false
 	for !finished {
 		select {
@@ -97,6 +98,9 @@ func (r *RoomOptions) Errors() []string {
 	}
 	if r.NumberOfQuestions > 100 {
 		errors = append(errors, "numberOfQuestionsToBig")
+	}
+	if r.MaxAnswerTime < 10*time.Second {
+		errors = append(errors, "maxAnswerTimeToSmall")
 	}
 	return errors
 }
@@ -144,16 +148,20 @@ func (r *roomImpl) SetOptions(options RoomOptions, playerKey string) {
 		panic(fmt.Sprintf("player with key \"%s\" does not exist in room \"%s\"", playerKey, r.Key()))
 	}
 	r.options = options
-	r.notifyPlayers(func(p Player) {
-		p.NotifyRoomUpdated(options, player.Name)
-	})
+	r.notifyPlayers(
+		func(p Player) {
+			p.NotifyRoomUpdated(options, player.Name)
+		},
+	)
 }
 
 func (r *roomImpl) Join(name string) Player {
 	player := Player{Name: name, Secret: keygen.PlayerKey(), Key: keygen.PlayerKey()}
-	r.notifyPlayers(func(p Player) {
-		p.NotifyPlayerJoined(player.Name, player.Key)
-	})
+	r.notifyPlayers(
+		func(p Player) {
+			p.NotifyPlayerJoined(player.Name, player.Key)
+		},
+	)
 	r.players[player.Key] = &player
 	return player
 }
@@ -182,9 +190,11 @@ func (r *roomImpl) Play(playerKey string) {
 	}
 	triangles := polygon(r.Options().Area).computeTriangulation()
 	center := triangles.randomPoint(r.random)
-	r.notifyPlayers(func(player Player) {
-		player.NotifyGameStarted(startPlayer.Name, center)
-	})
+	r.notifyPlayers(
+		func(player Player) {
+			player.NotifyGameStarted(startPlayer.Name, center)
+		},
+	)
 	numberOfQuestions := r.options.NumberOfQuestions
 	r.points = make(map[string]int)
 	r.advanceGame = make(chan bool)
@@ -193,17 +203,21 @@ func (r *roomImpl) Play(playerKey string) {
 			err := r.playQuestion(round, triangles)
 			if err != nil {
 				log.Printf("game in room \"%s\" ended due to an error: %v", r.Key(), err)
-				r.notifyPlayers(func(player Player) {
-					player.NotifyGameEnded("error", r.points)
-				})
+				r.notifyPlayers(
+					func(player Player) {
+						player.NotifyGameEnded("error", r.points)
+					},
+				)
 			}
 			if round != numberOfQuestions-1 {
 				<-r.advanceGame
 			}
 		}
-		r.notifyPlayers(func(player Player) {
-			player.NotifyGameEnded("finished", r.points)
-		})
+		r.notifyPlayers(
+			func(player Player) {
+				player.NotifyGameEnded("finished", r.points)
+			},
+		)
 		r.advanceGame = nil
 		r.points = nil
 	}()
@@ -232,20 +246,28 @@ func (r *roomImpl) playQuestion(round int, triangles triangulation) error {
 		points:             make(map[string]int),
 		allPlayersAnswered: make(chan bool),
 		begin:              time.Now(),
-		duration:           120 * time.Second,
+		duration:           r.options.MaxAnswerTime,
 	}
 	r.Unlock()
-	r.sendCountdowns(3, func(player Player) func(int) {
-		return player.NotifyQuestionCountdown
-	})
-	r.notifyPlayers(func(player Player) {
-		player.NotifyQuestion(question)
-	})
-	r.currentQuestion.waitForPlayers(r.currentQuestion.duration, func(followUps int) {
-		r.notifyPlayers(func(player Player) {
-			player.NotifyAnswerTimeCountdown(followUps)
-		})
-	})
+	r.sendCountdowns(
+		3, func(player Player) func(int) {
+			return player.NotifyQuestionCountdown
+		},
+	)
+	r.notifyPlayers(
+		func(player Player) {
+			player.NotifyQuestion(question)
+		},
+	)
+	r.currentQuestion.waitForPlayers(
+		func(followUps int) {
+			r.notifyPlayers(
+				func(player Player) {
+					player.NotifyAnswerTimeCountdown(followUps)
+				},
+			)
+		},
+	)
 	for key, value := range r.currentQuestion.points {
 		r.points[key] = r.points[key] + value
 	}
@@ -255,9 +277,11 @@ func (r *roomImpl) playQuestion(round int, triangles triangulation) error {
 		PointDelta: r.currentQuestion.points,
 		Points:     r.points,
 	}
-	r.notifyPlayers(func(player Player) {
-		player.NotifyQuestionResults(result)
-	})
+	r.notifyPlayers(
+		func(player Player) {
+			player.NotifyQuestionResults(result)
+		},
+	)
 	r.Lock()
 	r.currentQuestion = nil
 	r.Unlock()
@@ -299,9 +323,11 @@ func (r *roomImpl) AdvanceToNextQuestion() {
 
 func (r *roomImpl) sendCountdowns(amount int, consumer func(Player) func(int)) {
 	for i := 0; i < amount; i++ {
-		r.notifyPlayers(func(player Player) {
-			consumer(player)(amount - i - 1)
-		})
+		r.notifyPlayers(
+			func(player Player) {
+				consumer(player)(amount - i - 1)
+			},
+		)
 		time.Sleep(time.Second)
 	}
 }

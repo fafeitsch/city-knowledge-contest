@@ -6,6 +6,7 @@ import (
 	"github.com/fafeitsch/city-knowledge-contest/backend/contest"
 	"log"
 	"sync"
+	"time"
 )
 
 type roomContainer struct {
@@ -67,6 +68,7 @@ type roomUpdateRequest struct {
 	Area              [][2]float64 `json:"area"`
 	NumberOfQuestions int          `json:"numberOfQuestions"`
 	RoomKey           string       `json:"roomKey"`
+	MaxAnswerTimeSec  int          `json:"maxAnswerTimeSec"`
 	PlayerKey         string       `json:"playerKey"`
 	PlayerSecret      string       `json:"playerSecret"`
 }
@@ -85,15 +87,20 @@ func (r *roomContainer) updateRoom(message json.RawMessage) (*rpcRequestContext,
 		process: func() (any, error) {
 			area := make([]contest.Coordinate, 0, len(request.Area))
 			for _, coordinate := range request.Area {
-				area = append(area, contest.Coordinate{
-					Lat: coordinate[0],
-					Lng: coordinate[1],
-				})
+				area = append(
+					area, contest.Coordinate{
+						Lat: coordinate[0],
+						Lng: coordinate[1],
+					},
+				)
 			}
-			room.SetOptions(contest.RoomOptions{
-				Area:              area,
-				NumberOfQuestions: request.NumberOfQuestions,
-			}, request.PlayerKey)
+			room.SetOptions(
+				contest.RoomOptions{
+					Area:              area,
+					NumberOfQuestions: request.NumberOfQuestions,
+					MaxAnswerTime:     time.Duration(request.MaxAnswerTimeSec) * time.Second,
+				}, request.PlayerKey,
+			)
 			return updateRoomResponse{
 				Errors: room.ConfigErrors(),
 			}, nil
@@ -119,8 +126,9 @@ func (r *roomContainer) joinRoom(message json.RawMessage) (*rpcRequestContext, e
 	room, ok := r.openRooms[request.RoomKey]
 	r.RUnlock()
 	if !ok {
-		return &rpcRequestContext{release: unlockRoom(room)}, fmt.Errorf("room with key \"%s\" not found",
-			request.RoomKey)
+		return &rpcRequestContext{release: unlockRoom(room)}, fmt.Errorf(
+			"room with key \"%s\" not found", request.RoomKey,
+		)
 	}
 	room.Lock()
 	return &rpcRequestContext{
@@ -151,8 +159,10 @@ func (r *roomContainer) startGame(message json.RawMessage) (*rpcRequestContext, 
 		return &rpcRequestContext{release: unlockRoom(room)}, err
 	}
 	if len(room.ConfigErrors()) > 0 {
-		return &rpcRequestContext{release: unlockRoom(room)}, fmt.Errorf("the room is not yet configured correctly, "+
-			"it still has the following config errors: %v", room.ConfigErrors())
+		return &rpcRequestContext{release: unlockRoom(room)}, fmt.Errorf(
+			"the room is not yet configured correctly, "+
+				"it still has the following config errors: %v", room.ConfigErrors(),
+		)
 	}
 	return &rpcRequestContext{
 		process: func() (any, error) {
@@ -191,15 +201,16 @@ func (r *roomContainer) answerQuestion(message json.RawMessage) (*rpcRequestCont
 		return &rpcRequestContext{release: unlockRoom(room)}, err
 	}
 	if !room.HasActiveQuestion() {
-		return &rpcRequestContext{release: unlockRoom(room)},
-			fmt.Errorf("question cannot be answered because there is no active question")
+		return &rpcRequestContext{release: unlockRoom(room)}, fmt.Errorf("question cannot be answered because there is no active question")
 	}
 	return &rpcRequestContext{
 		process: func() (any, error) {
-			result, err := room.AnswerQuestion(request.PlayerKey, contest.Coordinate{
-				Lat: request.Guess[0],
-				Lng: request.Guess[1],
-			})
+			result, err := room.AnswerQuestion(
+				request.PlayerKey, contest.Coordinate{
+					Lat: request.Guess[0],
+					Lng: request.Guess[1],
+				},
+			)
 			if err != nil {
 				return nil, fmt.Errorf("could not validate answer: %v", err)
 			}
@@ -216,7 +227,9 @@ func (r *roomContainer) advanceGame(message json.RawMessage) (*rpcRequestContext
 		return &rpcRequestContext{release: unlockRoom(room)}, err
 	}
 	if !room.CanBeAdvanced() {
-		return &rpcRequestContext{release: unlockRoom(room)}, fmt.Errorf("the room \"%s\" cannot be advanced", request.RoomKey)
+		return &rpcRequestContext{release: unlockRoom(room)}, fmt.Errorf(
+			"the room \"%s\" cannot be advanced", request.RoomKey,
+		)
 	}
 	return &rpcRequestContext{
 		process: func() (any, error) {

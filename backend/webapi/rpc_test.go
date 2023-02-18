@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"sync"
 	"testing"
+	"time"
 )
 
 var container = roomContainer{openRooms: make(map[string]contest.Room)}
@@ -47,7 +48,7 @@ func Test_createRoom(t *testing.T) {
 			assert.True(
 				t, len(room.PlayerSecret) > 1, "player secret \"%s\" too short", room.PlayerSecret,
 			)
-			assert.Equal(t, []string{"tooFewCoordinates"}, room.Errors)
+			assert.Equal(t, []string{"tooFewCoordinates", "maxAnswerTimeToSmall"}, room.Errors)
 			assert.Equal(t, 10, room.NumberOfQuestions)
 			assert.Equal(t, 0, len(room.Area))
 		},
@@ -76,6 +77,7 @@ func Test_updateRoom(t *testing.T) {
 				PlayerKey:         player.Key,
 				PlayerSecret:      player.Secret,
 				NumberOfQuestions: 42,
+				MaxAnswerTimeSec:  10,
 				RoomKey:           room.Key(),
 				Area:              [][2]float64{{1, 2}, {3, 4}},
 			}
@@ -90,6 +92,7 @@ func Test_updateRoom(t *testing.T) {
 			assert.Equal(t, contest.Coordinate{Lat: 1, Lng: 2}, got.Area[0])
 			assert.Equal(t, 2, len(got.Area))
 			assert.Equal(t, 42, got.NumberOfQuestions)
+			assert.Equal(t, 10*time.Second, got.MaxAnswerTime)
 		},
 	)
 }
@@ -160,6 +163,7 @@ func Test_StartGame(t *testing.T) {
 				contest.RoomOptions{
 					NumberOfQuestions: 1,
 					Area:              []contest.Coordinate{},
+					MaxAnswerTime:     10 * time.Second,
 				}, player.Key,
 			)
 			request := startGameRequest{
@@ -185,6 +189,7 @@ func Test_StartGame(t *testing.T) {
 			room.SetOptions(
 				contest.RoomOptions{
 					NumberOfQuestions: 1,
+					MaxAnswerTime:     10 * time.Second,
 					Area: []contest.Coordinate{
 						{Lat: 1, Lng: 2},
 						{Lat: 3, Lng: 4},
@@ -266,6 +271,7 @@ func Test_AnswerQuestion(t *testing.T) {
 				contest.RoomOptions{
 					NumberOfQuestions: 1,
 					Area:              []contest.Coordinate{{Lat: 1, Lng: 2}, {Lat: 3, Lng: 4}, {Lat: 1, Lng: 5}},
+					MaxAnswerTime:     10 * time.Second,
 				}, player.Key,
 			)
 			room.Play(player.Key)
@@ -341,6 +347,7 @@ func Test_AdvanceGame(t *testing.T) {
 				contest.RoomOptions{
 					NumberOfQuestions: 3,
 					Area:              []contest.Coordinate{{Lat: 1, Lng: 2}, {Lat: 3, Lng: 4}, {Lat: 1, Lng: 5}},
+					MaxAnswerTime:     10 * time.Second,
 				}, player.Key,
 			)
 			room.Play(player.Key)
