@@ -2,18 +2,14 @@ package contest
 
 import (
 	"fmt"
+	"github.com/fafeitsch/city-knowledge-contest/backend/geodata"
 	"github.com/fafeitsch/city-knowledge-contest/backend/keygen"
-	"log"
+	"github.com/fafeitsch/city-knowledge-contest/backend/types"
 	"math"
 	"math/rand"
 	"sync"
 	"time"
 )
-
-type Coordinate struct {
-	Lat float64
-	Lng float64
-}
 
 type Room interface {
 	Lock()
@@ -25,7 +21,7 @@ type Room interface {
 	Join(string) Player
 	FindPlayer(string) (*Player, bool)
 	Play(string)
-	AnswerQuestion(string, Coordinate) (int, error)
+	AnswerQuestion(string, types.Coordinate) (int, error)
 	HasActiveQuestion() bool
 	CanBeAdvanced() bool
 	AdvanceToNextQuestion()
@@ -49,14 +45,14 @@ func (r *roomImpl) Key() string {
 }
 
 type RoomOptions struct {
-	Area              []Coordinate
+	StreetList        *geodata.StreetList
 	NumberOfQuestions int
 	MaxAnswerTime     time.Duration
 }
 
 type Question struct {
-	StreetName         string
-	Solution           Coordinate
+	Street             geodata.Street
+	Solution           types.Coordinate
 	points             map[string]int
 	allPlayersAnswered chan bool
 	begin              time.Time
@@ -90,8 +86,8 @@ func (q *Question) waitForPlayers(countdown func(int)) {
 
 func (r *RoomOptions) Errors() []string {
 	errors := make([]string, 0, 0)
-	if len(r.Area) < 3 {
-		errors = append(errors, "tooFewCoordinates")
+	if r.StreetList == nil {
+		errors = append(errors, "streetListMissing")
 	}
 	if r.NumberOfQuestions < 1 {
 		errors = append(errors, "numberOfQuestionsToSmall")
@@ -128,7 +124,7 @@ func NewRoom() Room {
 		random:   rand.New(rand.NewSource(time.Now().Unix())),
 		players:  make(map[string]*Player),
 		options: RoomOptions{
-			Area:              []Coordinate{},
+			MaxAnswerTime:     120 * time.Second,
 			NumberOfQuestions: 10,
 		},
 	}
@@ -188,11 +184,9 @@ func (r *roomImpl) Play(playerKey string) {
 	if !ok {
 		panic(fmt.Sprintf("player with key \"%s\" does not exist in this room", playerKey))
 	}
-	triangles := polygon(r.Options().Area).computeTriangulation()
-	center := triangles.randomPoint(r.random)
 	r.notifyPlayers(
 		func(player Player) {
-			player.NotifyGameStarted(startPlayer.Name, center)
+			player.NotifyGameStarted(startPlayer.Name, r.options.StreetList.Center)
 		},
 	)
 	numberOfQuestions := r.options.NumberOfQuestions
@@ -200,15 +194,7 @@ func (r *roomImpl) Play(playerKey string) {
 	r.advanceGame = make(chan bool)
 	go func() {
 		for round := 0; round < numberOfQuestions; round++ {
-			err := r.playQuestion(round, triangles)
-			if err != nil {
-				log.Printf("game in room \"%s\" ended due to an error: %v", r.Key(), err)
-				r.notifyPlayers(
-					func(player Player) {
-						player.NotifyGameEnded("error", r.points)
-					},
-				)
-			}
+			r.playQuestion(round)
 			if round != numberOfQuestions-1 {
 				<-r.advanceGame
 			}
@@ -223,25 +209,15 @@ func (r *roomImpl) Play(playerKey string) {
 	}()
 }
 
-func (r *roomImpl) playQuestion(round int, triangles triangulation) error {
-	question := ""
-	solution := Coordinate{}
-	tries := 0
-	for tries < 10 && question == "" {
-		randomPoint := triangles.randomPoint(r.random)
-		var err error
-		question, solution, err = queryStreet(randomPoint, r.random)
-		if err != nil {
-			return fmt.Errorf("could not query address of %v: %v", randomPoint, err)
-		}
-		tries = tries + 1
-	}
-	if question == "" {
-		return fmt.Errorf("could not find random streetname after %d attempts, giving up", tries)
+func (r *roomImpl) playQuestion(round int) {
+	randomStreet := r.options.StreetList.GetRandomStreet(r.random)
+	solution := types.Coordinate{}
+	if randomStreet.Coordinate != nil {
+		solution = *randomStreet.Coordinate
 	}
 	r.Lock()
 	r.currentQuestion = &Question{
-		StreetName:         question,
+		Street:             randomStreet,
 		Solution:           solution,
 		points:             make(map[string]int),
 		allPlayersAnswered: make(chan bool),
@@ -256,7 +232,7 @@ func (r *roomImpl) playQuestion(round int, triangles triangulation) error {
 	)
 	r.notifyPlayers(
 		func(player Player) {
-			player.NotifyQuestion(question)
+			player.NotifyQuestion(randomStreet.Name)
 		},
 	)
 	r.currentQuestion.waitForPlayers(
@@ -272,7 +248,7 @@ func (r *roomImpl) playQuestion(round int, triangles triangulation) error {
 		r.points[key] = r.points[key] + value
 	}
 	result := QuestionResult{
-		Question:   question,
+		Question:   randomStreet.Name,
 		Solution:   solution,
 		PointDelta: r.currentQuestion.points,
 		Points:     r.points,
@@ -285,17 +261,15 @@ func (r *roomImpl) playQuestion(round int, triangles triangulation) error {
 	r.Lock()
 	r.currentQuestion = nil
 	r.Unlock()
-
-	return nil
 }
 
-func (r *roomImpl) AnswerQuestion(playerKey string, guess Coordinate) (int, error) {
+func (r *roomImpl) AnswerQuestion(playerKey string, guess types.Coordinate) (int, error) {
 	_, ok := r.players[playerKey]
 	if !ok {
 		panic(fmt.Sprintf("player with key \"%s\" not found in this room", playerKey))
 	}
 	question := r.currentQuestion
-	result, err := verifyAnswer(guess, question.StreetName)
+	result, err := geodata.VerifyAnswer(guess, question.Street.Name)
 	if result {
 		difference := time.Now().Sub(question.begin)
 		percent := 1.0 * float64(difference.Milliseconds()) / float64(question.duration.Milliseconds())
@@ -341,7 +315,7 @@ type Player struct {
 
 type QuestionResult struct {
 	Question   string
-	Solution   Coordinate
+	Solution   types.Coordinate
 	PointDelta map[string]int
 	Points     map[string]int
 }
@@ -349,7 +323,7 @@ type QuestionResult struct {
 type Notifier interface {
 	NotifyPlayerJoined(string, string)
 	NotifyRoomUpdated(RoomOptions, string)
-	NotifyGameStarted(string, Coordinate)
+	NotifyGameStarted(string, types.Coordinate)
 	NotifyQuestionCountdown(int)
 	NotifyQuestion(string)
 	NotifyAnswerTimeCountdown(int)

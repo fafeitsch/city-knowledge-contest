@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/fafeitsch/city-knowledge-contest/backend/contest"
+	"github.com/fafeitsch/city-knowledge-contest/backend/geodata"
+	"github.com/fafeitsch/city-knowledge-contest/backend/types"
 	"log"
+	"path/filepath"
 	"sync"
 	"time"
 )
@@ -26,12 +29,12 @@ type createRoomRequest struct {
 }
 
 type createRoomResponse struct {
-	RoomKey           string       `json:"roomKey"`
-	PlayerKey         string       `json:"playerKey"`
-	PlayerSecret      string       `json:"playerSecret"`
-	NumberOfQuestions int          `json:"numberOfQuestions"`
-	Area              [][2]float64 `json:"area"`
-	Errors            []string     `json:"errors"`
+	ListName          string   `json:"listName"`
+	RoomKey           string   `json:"roomKey"`
+	PlayerKey         string   `json:"playerKey"`
+	PlayerSecret      string   `json:"playerSecret"`
+	NumberOfQuestions int      `json:"numberOfQuestions"`
+	Errors            []string `json:"errors"`
 }
 
 func (r *roomContainer) createRoom(message json.RawMessage) (*rpcRequestContext, error) {
@@ -46,17 +49,17 @@ func (r *roomContainer) createRoom(message json.RawMessage) (*rpcRequestContext,
 			r.Lock()
 			r.openRooms[room.Key()] = room
 			r.Unlock()
-			area := make([][2]float64, 0, len(room.Options().Area))
-			for _, coordinate := range room.Options().Area {
-				area = append(area, [2]float64{coordinate.Lat, coordinate.Lng})
+			streetListName := ""
+			if room.Options().StreetList != nil {
+				streetListName = room.Options().StreetList.Name
 			}
 			response := createRoomResponse{
 				RoomKey:           room.Key(),
 				PlayerKey:         player.Key,
 				PlayerSecret:      player.Secret,
 				Errors:            room.ConfigErrors(),
+				ListName:          streetListName,
 				NumberOfQuestions: room.Options().NumberOfQuestions,
-				Area:              area,
 			}
 			log.Printf("Created room \"%s\" from player \"%s\" (\"%s\").", room.Key(), player.Secret, player.Name)
 			return response, nil
@@ -65,12 +68,12 @@ func (r *roomContainer) createRoom(message json.RawMessage) (*rpcRequestContext,
 }
 
 type roomUpdateRequest struct {
-	Area              [][2]float64 `json:"area"`
-	NumberOfQuestions int          `json:"numberOfQuestions"`
-	RoomKey           string       `json:"roomKey"`
-	MaxAnswerTimeSec  int          `json:"maxAnswerTimeSec"`
-	PlayerKey         string       `json:"playerKey"`
-	PlayerSecret      string       `json:"playerSecret"`
+	ListFileName      string `json:"listFileName"`
+	NumberOfQuestions int    `json:"numberOfQuestions"`
+	RoomKey           string `json:"roomKey"`
+	MaxAnswerTimeSec  int    `json:"maxAnswerTimeSec"`
+	PlayerKey         string `json:"playerKey"`
+	PlayerSecret      string `json:"playerSecret"`
 }
 
 type updateRoomResponse struct {
@@ -85,18 +88,14 @@ func (r *roomContainer) updateRoom(message json.RawMessage) (*rpcRequestContext,
 	}
 	return &rpcRequestContext{
 		process: func() (any, error) {
-			area := make([]contest.Coordinate, 0, len(request.Area))
-			for _, coordinate := range request.Area {
-				area = append(
-					area, contest.Coordinate{
-						Lat: coordinate[0],
-						Lng: coordinate[1],
-					},
-				)
+			request.ListFileName = filepath.Base(request.ListFileName)
+			streetList, err := geodata.ReadStreetList(request.ListFileName)
+			if err != nil {
+				return updateRoomResponse{}, fmt.Errorf("could not load street list: %s", err)
 			}
 			room.SetOptions(
 				contest.RoomOptions{
-					Area:              area,
+					StreetList:        streetList,
 					NumberOfQuestions: request.NumberOfQuestions,
 					MaxAnswerTime:     time.Duration(request.MaxAnswerTimeSec) * time.Second,
 				}, request.PlayerKey,
@@ -206,7 +205,7 @@ func (r *roomContainer) answerQuestion(message json.RawMessage) (*rpcRequestCont
 	return &rpcRequestContext{
 		process: func() (any, error) {
 			result, err := room.AnswerQuestion(
-				request.PlayerKey, contest.Coordinate{
+				request.PlayerKey, types.Coordinate{
 					Lat: request.Guess[0],
 					Lng: request.Guess[1],
 				},
@@ -237,6 +236,14 @@ func (r *roomContainer) advanceGame(message json.RawMessage) (*rpcRequestContext
 			return map[string]any{}, nil
 		}, release: unlockRoom(room),
 	}, err
+}
+
+func listStreetListFiles(message json.RawMessage) (*rpcRequestContext, error) {
+	return &rpcRequestContext{
+		process: func() (any, error) {
+			return geodata.ReadStreetLists()
+		},
+	}, nil
 }
 
 func parseMessage[K any](message json.RawMessage) K {
