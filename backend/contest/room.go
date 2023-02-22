@@ -172,7 +172,7 @@ func (r *roomImpl) notifyPlayers(consumer func(Player)) {
 		if player.Notifier == nil {
 			continue
 		}
-		consumer(*player)
+		go consumer(*player)
 	}
 }
 
@@ -280,6 +280,11 @@ func (r *roomImpl) AnswerQuestion(playerKey string, guess types.Coordinate) (int
 	if len(question.points) == len(r.players) {
 		question.allPlayersAnswered <- true
 	}
+	r.notifyPlayers(
+		func(player Player) {
+			player.NotifyPlayerAnswered(playerKey)
+		},
+	)
 	return question.points[playerKey], err
 }
 
@@ -324,6 +329,7 @@ type Notifier interface {
 	NotifyPlayerJoined(string, string)
 	NotifyRoomUpdated(RoomOptions, string)
 	NotifyGameStarted(string, types.Coordinate)
+	NotifyPlayerAnswered(string)
 	NotifyQuestionCountdown(int)
 	NotifyQuestion(string)
 	NotifyAnswerTimeCountdown(int)

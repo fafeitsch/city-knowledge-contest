@@ -150,6 +150,11 @@ func (w *websocketNotifier) NotifyGameEnded(reason string, result map[string]int
 	w.write(websocketMessage{Topic: "gameEnded", Payload: message})
 }
 
+func (w *websocketNotifier) NotifyPlayerAnswered(playerKey string) {
+	message := map[string]any{"playerKey": playerKey}
+	w.write(websocketMessage{Topic: "playerAnswered", Payload: message})
+}
+
 func convertRoomOptions(options contest.RoomOptions, playerKey string) roomUpdateMessage {
 	listName := ""
 	if options.StreetList != nil {
