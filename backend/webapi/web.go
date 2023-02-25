@@ -38,11 +38,7 @@ func New(options Options) *RpcServer {
 
 func (r *RpcServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	parts := strings.Split(req.RequestURI, "/")
-	if len(parts) > 2 && parts[1] == "tile" {
-		r.serveTile(parts, resp)
-		return
-	}
-	if len(parts) < 2 || (parts[1] != "rpc" && parts[1] != "ws") {
+	if len(parts) != 2 || parts[1] != "rpc" {
 		fs := http.FileServer(http.Dir("./frontend"))
 		fs.ServeHTTP(resp, req)
 		return
