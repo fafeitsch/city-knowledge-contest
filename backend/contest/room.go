@@ -52,7 +52,6 @@ type RoomOptions struct {
 
 type Question struct {
 	Street             geodata.Street
-	Solution           types.Coordinate
 	points             map[string]int
 	allPlayersAnswered chan bool
 	begin              time.Time
@@ -194,7 +193,10 @@ func (r *roomImpl) Play(playerKey string) {
 	r.advanceGame = make(chan bool)
 	go func() {
 		for round := 0; round < numberOfQuestions; round++ {
-			r.playQuestion(round)
+			err := r.playQuestion(round)
+			if err != nil {
+				break
+			}
 			if round != numberOfQuestions-1 {
 				<-r.advanceGame
 			}
@@ -209,16 +211,24 @@ func (r *roomImpl) Play(playerKey string) {
 	}()
 }
 
-func (r *roomImpl) playQuestion(round int) {
+func (r *roomImpl) playQuestion(round int) error {
+	tries := 0
 	randomStreet := r.options.StreetList.GetRandomStreet(r.random)
-	solution := types.Coordinate{}
-	if randomStreet.Coordinate != nil {
-		solution = *randomStreet.Coordinate
+	for tries < 10 && randomStreet.Coordinate == nil {
+		randomStreet = r.options.StreetList.GetRandomStreet(r.random)
+		tries = tries + 1
+	}
+	if tries == 10 && randomStreet.Coordinate == nil {
+		r.notifyPlayers(
+			func(player Player) {
+				player.NotifyGameEnded("repeatedly failed to get random street", r.points)
+			},
+		)
+		return fmt.Errorf("repeatedly failed to get random street")
 	}
 	r.Lock()
 	r.currentQuestion = &Question{
 		Street:             randomStreet,
-		Solution:           solution,
 		points:             make(map[string]int),
 		allPlayersAnswered: make(chan bool),
 		begin:              time.Now(),
@@ -249,7 +259,7 @@ func (r *roomImpl) playQuestion(round int) {
 	}
 	result := QuestionResult{
 		Question:   randomStreet.Name,
-		Solution:   solution,
+		Solution:   *randomStreet.Coordinate,
 		PointDelta: r.currentQuestion.points,
 		Points:     r.points,
 	}
@@ -261,6 +271,7 @@ func (r *roomImpl) playQuestion(round int) {
 	r.Lock()
 	r.currentQuestion = nil
 	r.Unlock()
+	return nil
 }
 
 func (r *roomImpl) AnswerQuestion(playerKey string, guess types.Coordinate) (int, error) {
