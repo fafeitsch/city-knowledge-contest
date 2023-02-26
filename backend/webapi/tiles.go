@@ -14,7 +14,7 @@ var cacheMutex = &sync.Mutex{}
 var tileCache = map[string]tile{}
 
 func ClearTileCache() {
-	timer := time.NewTicker(15 * time.Minute)
+	timer := time.NewTicker(15 * time.Second)
 	for {
 		select {
 		case <-timer.C:

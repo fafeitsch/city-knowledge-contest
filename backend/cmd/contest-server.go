@@ -68,6 +68,13 @@ var nominatimServerFlag = &cli.StringFlag{
 	Usage:       "Base URL to the Nominatim backend API",
 	Destination: &nominatimServer,
 }
+var tileServer string
+var tileServerFlag = &cli.StringFlag{
+	Name:        "tileServer",
+	Value:       "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+	Usage:       "Base URL to the Tile backend API. Use {z}, {x}, {y} as placeholders (no \"$\").",
+	Destination: &tileServer,
+}
 
 func main() {
 	app := cli.App{
@@ -80,10 +87,11 @@ func main() {
 			roomKeyLengthFlag,
 			osrmServerFlag,
 			nominatimServerFlag,
+			tileServerFlag,
 		},
 		HideHelpCommand: true,
 		Action: func(context *cli.Context) error {
-			handler := webapi.New(webapi.Options{AllowCors: allowCors})
+			handler := webapi.New(webapi.Options{AllowCors: allowCors, TileServer: tileServer})
 			keygen.SetPlayerKeyLength(playerKeyLength)
 			keygen.SetRoomKeyLength(roomKeyLength)
 			geodata.OsrmServer = osrmServer
@@ -94,6 +102,8 @@ func main() {
 			log.Printf("Player key length set to %d", playerKeyLength)
 			log.Printf("Using Nominatim API backend at \"%s\"", geodata.NominatimServer)
 			log.Printf("Using OSRM API backend at \"%s\"", geodata.OsrmServer)
+			log.Printf("Using Tile API backend at \"%s\"", tileServer)
+			go webapi.ClearTileCache()
 			return http.ListenAndServe(":"+strconv.Itoa(port), handler)
 		},
 	}
