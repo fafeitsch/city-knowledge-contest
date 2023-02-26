@@ -2,13 +2,15 @@
   import Badge from "../components/Badge.svelte";
   import type { Player } from "../store";
   import { fly } from "svelte/transition";
+  import { flip } from "svelte/animate";
 
   export let players: Player[];
 </script>
 
-{#each players as player}
+{#each players as player (player.playerKey)}
   <div
     in:fly={{ x: 200, duration: 1000 }}
+    animate:flip
     id={player.playerKey}
     class="players"
   >

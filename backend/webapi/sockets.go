@@ -3,6 +3,7 @@ package webapi
 import (
 	"fmt"
 	"github.com/fafeitsch/city-knowledge-contest/backend/contest"
+	"github.com/fafeitsch/city-knowledge-contest/backend/types"
 	"log"
 	"net/http"
 	"nhooyr.io/websocket"
@@ -20,13 +21,15 @@ func (r *roomContainer) upgradeToWebSocket(writer http.ResponseWriter, request *
 		writer.WriteHeader(http.StatusNotFound)
 		return nil
 	}
-	// secret := request.Header.Get("ckc-player-secret")
+	//secret := request.Header.Get("ckc-player-secret")
 	player, _ := room.FindPlayer(parts[3])
-	// if !ok || player.Secret != secret {
-	// 	writer.WriteHeader(http.StatusUnauthorized)
-	// 	return nil
-	// }
-	connection, err := websocket.Accept(writer, request, &websocket.AcceptOptions{InsecureSkipVerify: options.AllowCors})
+	//if !ok || player.Secret != secret {
+	//	writer.WriteHeader(http.StatusUnauthorized)
+	//	return nil
+	//}
+	connection, err := websocket.Accept(
+		writer, request, &websocket.AcceptOptions{InsecureSkipVerify: options.AllowCors},
+	)
 	if err != nil {
 		return fmt.Errorf("could not upgrade to websockets: %v", err)
 	}
@@ -39,15 +42,19 @@ func (r *roomContainer) upgradeToWebSocket(writer http.ResponseWriter, request *
 	existingPlayers := room.Players()
 	players := make([]playerInfo, 0, len(existingPlayers))
 	for _, p := range existingPlayers {
-		players = append(players, playerInfo{
-			Name:      p.Name,
-			PlayerKey: p.Key,
-		})
+		players = append(
+			players, playerInfo{
+				Name:      p.Name,
+				PlayerKey: p.Key,
+			},
+		)
 	}
-	_ = wsjson.Write(request.Context(), connection, websocketMessage{
-		Topic:   "successfullyJoined",
-		Payload: initialJoinMessage{Players: players, Options: convertRoomOptions(room.Options(), "")},
-	})
+	_ = wsjson.Write(
+		request.Context(), connection, websocketMessage{
+			Topic:   "successfullyJoined",
+			Payload: initialJoinMessage{Players: players, Options: convertRoomOptions(room.Options(), "")},
+		},
+	)
 	log.Printf("Established websocket connection to player \"%s\" (\"%s\").", player.Key, player.Name)
 	closeContext := connection.CloseRead(request.Context())
 	var pingErr error
@@ -76,10 +83,11 @@ type playerInfo struct {
 }
 
 type roomUpdateMessage struct {
-	Area              [][2]float64 `json:"area"`
-	NumberOfQuestions int          `json:"numberOfQuestions"`
-	PlayerKey         string       `json:"playerKey,omitempty"`
-	Errors            []string     `json:"errors"`
+	ListName          string     `json:"listName"`
+	Center            [2]float64 `json:"center"`
+	NumberOfQuestions int        `json:"numberOfQuestions"`
+	PlayerKey         string     `json:"playerKey,omitempty"`
+	Errors            []string   `json:"errors"`
 }
 
 type websocketNotifier struct {
@@ -93,13 +101,15 @@ func (w *websocketNotifier) NotifyPlayerJoined(name string, key string) {
 
 func (w *websocketNotifier) NotifyRoomUpdated(options contest.RoomOptions, playerKey string) {
 	message := convertRoomOptions(options, playerKey)
-	w.write(websocketMessage{
-		Topic:   "roomUpdated",
-		Payload: message,
-	})
+	w.write(
+		websocketMessage{
+			Topic:   "roomUpdated",
+			Payload: message,
+		},
+	)
 }
 
-func (w *websocketNotifier) NotifyGameStarted(playerKey string, center contest.Coordinate) {
+func (w *websocketNotifier) NotifyGameStarted(playerKey string, center types.Coordinate) {
 	message := map[string]any{"playerKey": playerKey, "center": [2]float64{center.Lat, center.Lng}}
 	w.write(websocketMessage{Topic: "gameStarted", Payload: message})
 }
@@ -140,13 +150,23 @@ func (w *websocketNotifier) NotifyGameEnded(reason string, result map[string]int
 	w.write(websocketMessage{Topic: "gameEnded", Payload: message})
 }
 
+func (w *websocketNotifier) NotifyPlayerAnswered(playerKey string) {
+	message := map[string]any{"playerKey": playerKey}
+	w.write(websocketMessage{Topic: "playerAnswered", Payload: message})
+}
+
 func convertRoomOptions(options contest.RoomOptions, playerKey string) roomUpdateMessage {
-	area := make([][2]float64, 0, len(options.Area))
-	for _, coordinate := range options.Area {
-		area = append(area, [2]float64{coordinate.Lat, coordinate.Lng})
+	listName := ""
+	if options.StreetList != nil {
+		listName = options.StreetList.Name
+	}
+	center := [2]float64{0, 0}
+	if options.StreetList != nil {
+		center = [2]float64{options.StreetList.Center.Lat, options.StreetList.Center.Lng}
 	}
 	message := roomUpdateMessage{
-		Area:              area,
+		ListName:          listName,
+		Center:            center,
 		NumberOfQuestions: options.NumberOfQuestions,
 		PlayerKey:         playerKey,
 		Errors:            options.Errors(),

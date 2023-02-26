@@ -3,6 +3,7 @@
   import store, { GameState } from "./store";
   import { combineLatest } from "rxjs";
   import Game from "./views/Game.svelte";
+  import { environment } from "./environment";
 
   let gameState: GameState;
   store.get.gameState$.subscribe((state) => {
@@ -16,7 +17,10 @@
           return;
         }
         const websocket = new WebSocket(
-          "ws://localhost:23123/ws/" + game.roomId + "/" + game.playerKey
+          environment[import.meta.env.MODE].wsUrl +
+            game.roomId +
+            "/" +
+            game.playerKey
         );
         websocket.onmessage = (event) => {
           const data = JSON.parse(event.data);
@@ -29,6 +33,7 @@
           } else if (data.topic === "questionCountdown") {
             store.set.gameState(GameState.QuestionCountdown);
             store.set.countdownValue(data.payload.followUps);
+            store.set.gameResult(undefined);
           } else if (data.topic === "question") {
             store.set.gameState(GameState.Question);
             store.set.question(data.payload.find);

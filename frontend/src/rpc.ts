@@ -1,3 +1,5 @@
+import { environment } from "./environment";
+
 type Response<T> = {
   jsonrpc: string;
   result: T;
@@ -11,7 +13,7 @@ export async function handleRPCRequest<Params, ResponseType>({
   method: string;
   params: Params;
 }) {
-  return fetch("http://localhost:23123/rpc", {
+  return fetch(environment[import.meta.env.MODE].apiUrl, {
     method: "POST",
     body: JSON.stringify({
       method,

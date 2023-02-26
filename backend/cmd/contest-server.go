@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/fafeitsch/city-knowledge-contest/backend/contest"
+	"github.com/fafeitsch/city-knowledge-contest/backend/geodata"
 	"github.com/fafeitsch/city-knowledge-contest/backend/keygen"
 	"github.com/fafeitsch/city-knowledge-contest/backend/webapi"
 	"github.com/urfave/cli/v2"
@@ -61,23 +61,49 @@ var osrmServerFlag = &cli.StringFlag{
 	Usage:       "Base URL to the OSRM backend API",
 	Destination: &osrmServer,
 }
+var nominatimServer string
+var nominatimServerFlag = &cli.StringFlag{
+	Name:        "nominatimServer",
+	Value:       "https://nominatim.openstreetmap.org",
+	Usage:       "Base URL to the Nominatim backend API",
+	Destination: &nominatimServer,
+}
+var tileServer string
+var tileServerFlag = &cli.StringFlag{
+	Name:        "tileServer",
+	Value:       "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+	Usage:       "Base URL to the Tile backend API. Use {z}, {x}, {y} as placeholders (no \"$\").",
+	Destination: &tileServer,
+}
 
 func main() {
 	app := cli.App{
-		Name:            "City Knowledge Context",
-		Description:     "A competitive quiz about your favorite city",
-		Flags:           []cli.Flag{portFlag, allowCorsFlag, playerKeyLengthFlag, roomKeyLengthFlag, osrmServerFlag},
+		Name:        "City Knowledge Context",
+		Description: "A competitive quiz about your favorite city",
+		Flags: []cli.Flag{
+			portFlag,
+			allowCorsFlag,
+			playerKeyLengthFlag,
+			roomKeyLengthFlag,
+			osrmServerFlag,
+			nominatimServerFlag,
+			tileServerFlag,
+		},
 		HideHelpCommand: true,
 		Action: func(context *cli.Context) error {
-			handler := webapi.New(webapi.Options{AllowCors: allowCors})
+			handler := webapi.New(webapi.Options{AllowCors: allowCors, TileServer: tileServer})
 			keygen.SetPlayerKeyLength(playerKeyLength)
 			keygen.SetRoomKeyLength(roomKeyLength)
-			contest.OsrmServer = osrmServer
+			geodata.OsrmServer = osrmServer
+			geodata.NominatimServer = nominatimServer
 			log.Printf("Starting server on port %d", port)
 			log.Printf("CORS mode enabled: %v", allowCors)
 			log.Printf("Room key length set to %d", roomKeyLength)
 			log.Printf("Player key length set to %d", playerKeyLength)
-			log.Printf("Using OSRM API backend at \"%s\"", contest.OsrmServer)
+			log.Printf("Using Nominatim API backend at \"%s\"", geodata.NominatimServer)
+			log.Printf("Using OSRM API backend at \"%s\"", geodata.OsrmServer)
+			log.Printf("Using Tile API backend at \"%s\"", tileServer)
+			go webapi.ClearTileCache()
 			return http.ListenAndServe(":"+strconv.Itoa(port), handler)
 		},
 	}

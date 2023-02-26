@@ -19,12 +19,13 @@ type RpcServer struct {
 func New(options Options) *RpcServer {
 	roomContainer := roomContainer{openRooms: make(map[string]contest.Room)}
 	methods := map[string]rpcHandler{
-		"createRoom":     roomContainer.createRoom,
-		"updateRoom":     roomContainer.updateRoom,
-		"joinRoom":       roomContainer.joinRoom,
-		"startGame":      roomContainer.startGame,
-		"answerQuestion": roomContainer.answerQuestion,
-		"advanceGame":    roomContainer.advanceGame,
+		"createRoom":              roomContainer.createRoom,
+		"updateRoom":              roomContainer.updateRoom,
+		"joinRoom":                roomContainer.joinRoom,
+		"startGame":               roomContainer.startGame,
+		"answerQuestion":          roomContainer.answerQuestion,
+		"advanceGame":             roomContainer.advanceGame,
+		"getAvailableStreetLists": listStreetListFiles,
 	}
 	return &RpcServer{
 		methods: methods,
@@ -36,6 +37,16 @@ func New(options Options) *RpcServer {
 }
 
 func (r *RpcServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+	parts := strings.Split(req.RequestURI, "/")
+	if len(parts) > 2 && parts[1] == "tile" {
+		r.serveTile(parts, resp)
+		return
+	}
+	if len(parts) < 2 || (parts[1] != "rpc" && parts[1] != "ws") {
+		fs := http.FileServer(http.Dir("./frontend"))
+		fs.ServeHTTP(resp, req)
+		return
+	}
 	if r.options.AllowCors {
 		setCorsHeaders(resp)
 	}
@@ -52,11 +63,6 @@ func (r *RpcServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	}
 	if req.Method != "POST" {
 		resp.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	parts := strings.Split(req.RequestURI, "/")
-	if len(parts) != 2 || parts[1] != "rpc" {
-		resp.WriteHeader(http.StatusNotFound)
 		return
 	}
 	var request Request
@@ -93,7 +99,10 @@ func setCorsHeaders(resp http.ResponseWriter) {
 	resp.Header().Set("Content-Type", "application/json")
 	resp.Header().Set("Access-Control-Allow-Origin", "*")
 	resp.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	resp.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+	resp.Header().Set(
+		"Access-Control-Allow-Headers",
+		"Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization",
+	)
 }
 
 func handlePanic(resp http.ResponseWriter, request Request) {
