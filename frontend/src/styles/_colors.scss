@@ -4,10 +4,18 @@
     background-color: $old-map;
 }
 
+.bg-old-map-lighter {
+    background-color: $beige;
+}
+
 .full-viewheight {
     height: 100vh;
 }
 
 .full-viewwidth {
     width: 100vw;
+}
+
+.color-black {
+    color: black
 }

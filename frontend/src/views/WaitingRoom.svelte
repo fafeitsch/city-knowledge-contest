@@ -1,5 +1,6 @@
 <script lang="ts">
   import Button from "../components/Button.svelte";
+  import CopyIcon from "../components/CopyIcon.svelte";
   import { handleRPCRequest } from "../rpc";
   import store, { GameState, type Game, type Player } from "../store";
 
@@ -47,4 +48,17 @@
 <div class="d-flex flex-column align-items-center gap-5">
   <div class="old-font fs-large">Gleich geht das Spiel los …</div>
   <Button title="Spiel starten" on:click={startGame} />
+  <p class="mt-5">
+    Teile den Link, um andere Personen zu diesem Spiel einzuladen:
+  </p>
+  <p class="fw-bold p-3 bg-old-map-lighter d-flex align-items-center gap-3">
+    {$game.roomId}<CopyIcon
+      width={16}
+      height={16}
+      className="color-black"
+      on:click={() => {
+        navigator.clipboard.writeText($game.roomId);
+      }}
+    />
+  </p>
 </div>
