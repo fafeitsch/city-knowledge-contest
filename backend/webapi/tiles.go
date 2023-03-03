@@ -1,37 +1,18 @@
 package webapi
 
 import (
-	"fmt"
 	"io"
-	"log"
+	"io/ioutil"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
 
 var cacheMutex = &sync.Mutex{}
-var tileCache = map[string]tile{}
-
-func ClearTileCache() {
-	timer := time.NewTicker(15 * time.Second)
-	for {
-		select {
-		case <-timer.C:
-			cacheMutex.Lock()
-			now := time.Now()
-			counter := 0
-			for key, tile := range tileCache {
-				if now.Sub(tile.timestamp) > 60*time.Minute {
-					delete(tileCache, key)
-					counter = counter + 1
-				}
-			}
-			cacheMutex.Unlock()
-			log.Printf("removed %d tiles from cache", counter)
-		}
-	}
-}
 
 type tile struct {
 	timestamp   time.Time
@@ -46,9 +27,14 @@ func (r *RpcServer) serveTile(parts []string, resp http.ResponseWriter) {
 	z := parts[2]
 	x := parts[3]
 	y := parts[4]
-	cached, ok := tileCache[fmt.Sprintf("%s/%s/%s", z, x, y)]
-	if ok {
-		r.readFromCache(resp, cached)
+	resp.Header().Set("Content-Type", "image/png")
+	cachedFile, err := os.Stat(filepath.Join("tiles", z, x, y) + ".png")
+	if err == nil && time.Now().Sub(cachedFile.ModTime()) < 24*time.Hour*180 {
+		tile, err := os.ReadFile(filepath.Join("tiles", z, x, y) + ".png")
+		resp.Header().Set("Content-Length", strconv.Itoa(len(tile)))
+		if err == nil {
+			_, _ = resp.Write(tile)
+		}
 		return
 	}
 	url := strings.Replace(r.options.TileServer, "{z}", z, 1)
@@ -59,23 +45,20 @@ func (r *RpcServer) serveTile(parts []string, resp http.ResponseWriter) {
 	req.Header.Set("User-Agent", "github.com/fafeitsch/city-knowledge-contest")
 	response, err := client.Do(req)
 	if err != nil {
-		fmt.Printf("%v", err)
 		http.Error(resp, "could not get tile from tile server", http.StatusInternalServerError)
 		return
 	}
 	body, err := io.ReadAll(response.Body)
-	cachedTile := tile{
-		timestamp:   time.Now(),
-		length:      response.Header.Get("Content-Length"),
-		contentType: response.Header.Get("Content-Type"),
-		content:     body,
+	_ = os.MkdirAll(filepath.Join("tiles", z, x), os.ModePerm)
+	if r.options.UseTileCache {
+		go func() {
+			_ = ioutil.WriteFile(filepath.Join("tiles", z, x, y)+".png", body, 0644)
+		}()
 	}
-	tileCache[fmt.Sprintf("%s/%s/%s", z, x, y)] = cachedTile
-	r.readFromCache(resp, cachedTile)
+	resp.Header().Set("Content-Length", strconv.Itoa(len(body)))
+	_, _ = resp.Write(body)
 }
 
 func (r *RpcServer) readFromCache(resp http.ResponseWriter, cached tile) {
-	resp.Header().Set("Content-Type", cached.contentType)
-	resp.Header().Set("Content-Length", cached.length)
 	_, _ = resp.Write(cached.content)
 }

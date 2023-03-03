@@ -69,6 +69,13 @@ var tileServerFlag = &cli.StringFlag{
 	Usage:       "Base URL to the Tile backend API. Use {z}, {x}, {y} as placeholders (no \"$\").",
 	Destination: &tileServer,
 }
+var useTileCache bool
+var useTileCacheFlag = &cli.BoolFlag{
+	Name:        "useTileCache",
+	Value:       false,
+	Usage:       "If true, OSM tiles will be cached in the ./file directory for 180 days.",
+	Destination: &useTileCache,
+}
 
 func main() {
 	app := cli.App{
@@ -81,10 +88,17 @@ func main() {
 			roomKeyLengthFlag,
 			nominatimServerFlag,
 			tileServerFlag,
+			useTileCacheFlag,
 		},
 		HideHelpCommand: true,
 		Action: func(context *cli.Context) error {
-			handler := webapi.New(webapi.Options{AllowCors: allowCors, TileServer: tileServer})
+			handler := webapi.New(
+				webapi.Options{
+					AllowCors:    allowCors,
+					TileServer:   tileServer,
+					UseTileCache: useTileCache,
+				},
+			)
 			keygen.SetPlayerKeyLength(playerKeyLength)
 			keygen.SetRoomKeyLength(roomKeyLength)
 			geodata.NominatimServer = nominatimServer
@@ -94,7 +108,7 @@ func main() {
 			log.Printf("Player key length set to %d", playerKeyLength)
 			log.Printf("Using Nominatim API backend at \"%s\"", geodata.NominatimServer)
 			log.Printf("Using Tile API backend at \"%s\"", tileServer)
-			go webapi.ClearTileCache()
+			log.Printf("Using Tile cache enabled: %v", useTileCache)
 			return http.ListenAndServe(":"+strconv.Itoa(port), handler)
 		},
 	}

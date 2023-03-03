@@ -24,6 +24,7 @@ type Error struct {
 }
 
 type Options struct {
-	AllowCors  bool
-	TileServer string
+	AllowCors    bool
+	TileServer   string
+	UseTileCache bool
 }

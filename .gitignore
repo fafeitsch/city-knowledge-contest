@@ -6,6 +6,7 @@
 *.dylib
 **/.idea
 **/streetlists
+**/tiles
 
 # Test binary, built with `go test -c`
 *.test
