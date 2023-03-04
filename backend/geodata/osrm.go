@@ -9,7 +9,6 @@ import (
 	"github.com/fafeitsch/city-knowledge-contest/backend/types"
 )
 
-var OsrmServer = "http://127.0.0.1:5000"
 var client = http.Client{Timeout: 60 * time.Second}
 
 type nominatimReverseResponse struct {
