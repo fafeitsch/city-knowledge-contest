@@ -2,14 +2,15 @@ package main
 
 import (
 	"fmt"
-	"github.com/fafeitsch/city-knowledge-contest/backend/geodata"
-	"github.com/fafeitsch/city-knowledge-contest/backend/keygen"
-	"github.com/fafeitsch/city-knowledge-contest/backend/webapi"
-	"github.com/urfave/cli/v2"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
+
+	"github.com/fafeitsch/city-knowledge-contest/backend/geodata"
+	"github.com/fafeitsch/city-knowledge-contest/backend/keygen"
+	"github.com/fafeitsch/city-knowledge-contest/backend/webapi"
+	"github.com/urfave/cli/v2"
 )
 
 func rangeValidation(min int, max int, name string) func(*cli.Context, int) error {
@@ -54,13 +55,6 @@ var roomKeyLengthFlag = &cli.IntFlag{
 	Action:      rangeValidation(2, 255, "roomKeyLength"),
 	Destination: &roomKeyLength,
 }
-var osrmServer string
-var osrmServerFlag = &cli.StringFlag{
-	Name:        "osrmServer",
-	Value:       "http://127.0.0.1:5000",
-	Usage:       "Base URL to the OSRM backend API",
-	Destination: &osrmServer,
-}
 var nominatimServer string
 var nominatimServerFlag = &cli.StringFlag{
 	Name:        "nominatimServer",
@@ -85,7 +79,6 @@ func main() {
 			allowCorsFlag,
 			playerKeyLengthFlag,
 			roomKeyLengthFlag,
-			osrmServerFlag,
 			nominatimServerFlag,
 			tileServerFlag,
 		},
@@ -94,14 +87,12 @@ func main() {
 			handler := webapi.New(webapi.Options{AllowCors: allowCors, TileServer: tileServer})
 			keygen.SetPlayerKeyLength(playerKeyLength)
 			keygen.SetRoomKeyLength(roomKeyLength)
-			geodata.OsrmServer = osrmServer
 			geodata.NominatimServer = nominatimServer
 			log.Printf("Starting server on port %d", port)
 			log.Printf("CORS mode enabled: %v", allowCors)
 			log.Printf("Room key length set to %d", roomKeyLength)
 			log.Printf("Player key length set to %d", playerKeyLength)
 			log.Printf("Using Nominatim API backend at \"%s\"", geodata.NominatimServer)
-			log.Printf("Using OSRM API backend at \"%s\"", geodata.OsrmServer)
 			log.Printf("Using Tile API backend at \"%s\"", tileServer)
 			go webapi.ClearTileCache()
 			return http.ListenAndServe(":"+strconv.Itoa(port), handler)
