@@ -60,5 +60,13 @@
 {/if}
 
 <footer>
-  <div class="p-3">Fancy Footer | License</div>
+  <div class="p-3 d-flex flex-column align-items-center gap-3">
+    <div>Fancy Footer | License</div>
+    <a
+      class="color-black"
+      href="https://www.flaticon.com/free-icons/location-pin"
+      title="location pin icons"
+      >Location pin icons created by Smashicons - Flaticon</a
+    >
+  </div>
 </footer>

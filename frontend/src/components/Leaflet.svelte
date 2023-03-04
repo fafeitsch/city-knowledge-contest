@@ -5,7 +5,7 @@
   import { environment } from "../environment";
   import { handleRPCRequest } from "../rpc";
   import store, { GameState, type Game } from "../store";
-  import img from "../assets/images/location-dot-solid.svg";
+  import img from "../assets/images/pin.png";
 
   export let currentResult: number;
   export let game: Game;
@@ -18,8 +18,8 @@
 
   const markerIcon = new Icon({
     iconUrl: img,
-    iconSize: [55, 75],
-    iconAnchor: [22, 94],
+    iconSize: [50, 50],
+    iconAnchor: [25, 50],
   });
 
   let marker: Marker;
