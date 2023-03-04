@@ -1,10 +1,11 @@
 <!-- Polygon shaped button inspired by https://www.codecraftsman.us/create-a-hexagonal-button-in-css/ -->
 <script lang="ts">
   export let title: string;
+  export let disabled: boolean
 </script>
 
 <div>
-  <button on:click>{title}</button>
+  <button class="{disabled ? 'disabled' : ''}" on:click disabled="{disabled}">{title}</button>
 </div>
 
 <style lang="scss">
@@ -44,6 +45,10 @@
         cursor: pointer;
         background-position-y: -50px;
       }
+    }
+
+    .disabled {
+      background-color: $redish;
     }
   }
 </style>

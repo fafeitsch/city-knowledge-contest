@@ -6,6 +6,15 @@ type Response<T> = {
   id: null;
 };
 
+export interface UpdateRoomParams {
+  listFileName: string;
+  numberOfQuestions: number;
+  playerKey: string;
+  playerSecret: string;
+  roomKey: string;
+  maxAnswerTimeSec: number;
+}
+
 export async function handleRPCRequest<Params, ResponseType>({
   method,
   params,

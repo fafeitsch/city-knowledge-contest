@@ -1,4 +1,5 @@
-import { BehaviorSubject, distinctUntilChanged, map } from "rxjs";
+import {BehaviorSubject, distinctUntilChanged, filter, map, withLatestFrom} from "rxjs";
+import {handleRPCRequest, type UpdateRoomParams} from './rpc';
 
 export enum GameState {
   SetupUsername = "SetupUsername",
@@ -35,50 +36,46 @@ export type GameResult = {
 };
 
 interface State {
-  roomId: string | undefined;
-  username: string | undefined;
-  playerKey: string | undefined;
-  playerSecret: string | undefined;
+  username: string;
   gameState: GameState;
   players: Player[];
   countdownValue: string;
   question: string;
   game: Game | undefined;
   gameResult: GameResult | undefined;
+  gameConfiguration: GameConfiguration | undefined;
+  gameErrors: string[]
+}
+
+export interface GameConfiguration {
+  listFileName: string;
+  numberOfQuestions: number;
+  maxAnswerTimeSec: number;
 }
 
 const state: State = {
-  roomId: undefined,
   username: undefined,
-  playerKey: undefined,
-  playerSecret: undefined,
   countdownValue: undefined,
   gameState: GameState.SetupUsername,
   players: [],
   question: undefined,
   game: undefined,
   gameResult: undefined,
+  gameConfiguration: undefined,
+  gameErrors: ['notInitialized'],
 };
 
 const state$ = new BehaviorSubject<State>(state);
 
-export default {
+const store = {
   get: {
-    roomId$: state$.pipe(
-      map((state) => state.roomId),
-      distinctUntilChanged()
-    ),
-    username$: state$.pipe(
-      map((state) => state.username),
-      distinctUntilChanged()
-    ),
-    playerKey$: state$.pipe(
-      map((state) => state.playerKey),
-      distinctUntilChanged()
-    ),
-    playerSecret$: state$.pipe(
-      map((state) => state.playerSecret),
-      distinctUntilChanged()
+    authData$: state$.pipe(
+      map(state => state.game ? ({
+        playerKey: state.game.playerKey,
+        playerSecret: state.game.playerSecret,
+        roomKey: state.game.roomId
+      }) : undefined),
+      distinctUntilChanged(),
     ),
     gameState$: state$.pipe(
       map((state) => state.gameState),
@@ -104,30 +101,20 @@ export default {
       map((state) => state.gameResult),
       distinctUntilChanged()
     ),
+    gameConfiguration$: state$.pipe(
+      map((state) => state.gameConfiguration),
+      distinctUntilChanged()
+    ),
+    errors$: state$.pipe(
+      map(state =>state.gameErrors),
+      distinctUntilChanged()
+    )
   },
   set: {
-    roomId(roomId: string | undefined) {
-      state$.next({
-        ...state$.value,
-        roomId,
-      });
-    },
     username(username: string | undefined) {
       state$.next({
         ...state$.value,
         username,
-      });
-    },
-    playerKey(playerKey: string | undefined) {
-      state$.next({
-        ...state$.value,
-        playerKey,
-      });
-    },
-    playerSecret(playerSecret: string | undefined) {
-      state$.next({
-        ...state$.value,
-        playerSecret,
       });
     },
     gameState(gameState: GameState) {
@@ -152,7 +139,7 @@ export default {
     updatePlayerRanking(gameResult: GameResult) {
       const newPlayers = state$.value.players
         .map((player) => {
-          return { ...player, points: gameResult.points[player.playerKey] };
+          return {...player, points: gameResult.points[player.playerKey]};
         })
         .sort((playerA, playerB) => {
           return playerA.points > playerB.points ? -1 : 1;
@@ -193,5 +180,55 @@ export default {
         gameState: GameState.SetupMap,
       });
     },
+    streetList(fileName: string) {
+      state$.next({
+        ...state$.value,
+        gameConfiguration: {
+          ...state$.value.gameConfiguration,
+          listFileName: fileName,
+        }
+      })
+    },
+    gameErrors(errors: string[]) {
+      state$.next({
+       ...state$.value,
+        gameErrors: errors,
+      });
+    }
   },
+  methods: {
+    async startGame() {
+      await handleRPCRequest<
+        { playerKey: string; playerSecret: string; roomKey: string },
+        null
+      >({
+        method: "startGame",
+        params: {
+          playerKey: state$.value.game.playerKey,
+          roomKey: state$.value.game.roomId,
+          playerSecret: state$.value.game.playerSecret,
+        },
+      })
+      store.set.gameState(GameState.Started);
+    }
+  }
 };
+
+export default store
+
+store.get.gameConfiguration$.pipe(
+  withLatestFrom(store.get.authData$.pipe(filter(authData => !!(authData)))),
+).subscribe(
+  async ([config, authData]) => {
+    const result = await handleRPCRequest<UpdateRoomParams, {errors: string[]}>({
+      method: "updateRoom",
+      params: {
+        ...authData,
+        ...config,
+        maxAnswerTimeSec: 30,
+        numberOfQuestions: 10
+      },
+    })
+    store.set.gameErrors(result.result.errors);
+  }
+)
