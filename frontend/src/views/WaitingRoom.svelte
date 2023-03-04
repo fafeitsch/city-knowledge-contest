@@ -1,31 +1,37 @@
+<script lang="ts" context="module">
+  export type UpdateRoomParams = {
+    listFileName: string;
+    numberOfQuestions: number;
+    playerKey: string;
+    playerSecret: string;
+    roomKey: string;
+    maxAnswerTimeSec: number;
+  };
+
+  export const defaultRoomSeetings = {
+    numberOfQuestions: 1,
+    listFileName: "wuerzburg.json",
+    maxAnswerTimeSec: 600,
+  };
+</script>
+
 <script lang="ts">
+  import AvailableStreetLists from "../components/AvailableStreetLists.svelte";
   import Button from "../components/Button.svelte";
   import CopyIcon from "../components/CopyIcon.svelte";
   import { handleRPCRequest } from "../rpc";
-  import store, { GameState, type Game, type Player } from "../store";
+  import store, { GameState } from "../store";
 
   let game = store.get.game$;
 
   function startGame() {
-    handleRPCRequest<
-      {
-        listFileName: string;
-        numberOfQuestions: number;
-        playerKey: string;
-        playerSecret: string;
-        roomKey: string;
-        maxAnswerTimeSec: number;
-      },
-      null
-    >({
+    handleRPCRequest<UpdateRoomParams, null>({
       method: "updateRoom",
       params: {
-        listFileName: "wuerzburg.json",
-        numberOfQuestions: 10,
+        ...defaultRoomSeetings,
         playerKey: $game.playerKey,
         roomKey: $game.roomId,
         playerSecret: $game.playerSecret,
-        maxAnswerTimeSec: 600,
       },
     }).then(() => {
       handleRPCRequest<
@@ -49,7 +55,7 @@
   <div class="old-font fs-large">Gleich geht das Spiel los …</div>
   <Button title="Spiel starten" on:click={startGame} />
   <p class="mt-5">
-    Teile den Link, um andere Personen zu diesem Spiel einzuladen:
+    Teile den Code, um andere Personen zu diesem Spiel einzuladen:
   </p>
   <p class="fw-bold p-3 bg-old-map-lighter d-flex align-items-center gap-3">
     {$game.roomId}<CopyIcon
@@ -61,4 +67,5 @@
       }}
     />
   </p>
+  <AvailableStreetLists />
 </div>

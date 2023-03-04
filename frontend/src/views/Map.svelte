@@ -31,11 +31,7 @@
   {#if $gameState === GameState.QuestionCountdown}
     <div class="overlay">{$countdownValue}</div>
   {/if}
-  <Leaflet
-    game={$game}
-    solution={$gameResult ? $gameResult.solution : undefined}
-    bind:currentResult
-  />
+  <Leaflet game={$game} bind:currentResult />
   {#if $gameState === GameState.Question}
     <div class="container">
       <div>Suche den Ort {$question}</div>
