@@ -3,6 +3,7 @@ package geodata
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -20,6 +21,8 @@ type nominatimReverseResponse struct {
 func sendNominatimRequest(c types.Coordinate) (nominatimReverseResponse, error) {
 	url := fmt.Sprintf("%s/reverse?format=json&lat=%f&lon=%f&zoom=17&addressdetails=1", NominatimServer, c.Lat, c.Lng)
 	resp, err := client.Get(url)
+
+	log.Printf("Request reverse search for %f, %f at %s", c.Lat, c.Lng, url)
 
 	if err != nil {
 		return nominatimReverseResponse{}, fmt.Errorf("could not query Nominatim address: %v", err)
