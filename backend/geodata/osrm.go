@@ -3,45 +3,48 @@ package geodata
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/fafeitsch/city-knowledge-contest/backend/types"
 	"net/http"
 	"time"
+
+	"github.com/fafeitsch/city-knowledge-contest/backend/types"
 )
 
 var OsrmServer = "http://127.0.0.1:5000"
 var client = http.Client{Timeout: 60 * time.Second}
 
-type osrmAddressResponse struct {
-	Waypoints []struct {
-		Name     string     `json:"name"`
-		Location [2]float64 `json:"location"`
-		Distance float64    `json:"distance"`
-	} `json:"waypoints"`
+type nominatimReverseResponse struct {
+	Address struct {
+		Road string `json:"road"`
+	} `json:"address"`
 }
 
-func sendOsrmRequest(c types.Coordinate) (string, osrmAddressResponse, error) {
-	url := fmt.Sprintf("%s/nearest/v1/driving/%f,%f.json?number=10", OsrmServer, c.Lng, c.Lat)
-	osrmResp, err := client.Get(url)
+func sendNominatimRequest(c types.Coordinate) (string, nominatimReverseResponse, error) {
+	url := fmt.Sprintf("%s/reverse?format=json&lat=%f&lon=%f&zoom=17&addressdetails=1", NominatimServer, c.Lat, c.Lng)
+	resp, err := client.Get(url)
+
 	if err != nil {
-		return "", osrmAddressResponse{}, fmt.Errorf("could not query OSRM address: %v", err)
+		return "", nominatimReverseResponse{}, fmt.Errorf("could not query Nominatim address: %v", err)
 	}
-	var osrmWaypoints osrmAddressResponse
-	err = json.NewDecoder(osrmResp.Body).Decode(&osrmWaypoints)
+
+	var nomiReponse nominatimReverseResponse
+	err = json.NewDecoder(resp.Body).Decode(&nomiReponse)
+
 	if err != nil {
-		return "", osrmAddressResponse{}, fmt.Errorf("could not parse response from osrm: %v", err)
+		return "", nominatimReverseResponse{}, fmt.Errorf("could not parse response from Nominatim: %v", err)
 	}
-	return url, osrmWaypoints, nil
+
+	return url, nomiReponse, nil
 }
 
 func VerifyAnswer(guess types.Coordinate, answer string) (bool, error) {
-	_, waypoints, err := sendOsrmRequest(guess)
+	_, result, err := sendNominatimRequest(guess)
 	if err != nil {
 		return false, err
 	}
-	for _, wp := range waypoints.Waypoints {
-		if wp.Name == answer {
-			return true, nil
-		}
+
+	if result.Address.Road == answer {
+		return true, nil
 	}
+
 	return false, nil
 }
