@@ -9,7 +9,7 @@
   };
 
   export const defaultRoomSeetings = {
-    numberOfQuestions: 1,
+    numberOfQuestions: 10,
     listFileName: "wuerzburg.json",
     maxAnswerTimeSec: 600,
   };

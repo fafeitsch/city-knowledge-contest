@@ -41,6 +41,8 @@
             store.set.gameState(GameState.Finished);
             store.set.gameResult(data.payload);
             store.set.updatePlayerRanking(data.payload);
+          } else if (data.topic === "gameEnded") {
+            store.set.gameState(GameState.GameEnded);
           }
         };
       }

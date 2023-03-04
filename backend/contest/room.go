@@ -198,9 +198,7 @@ func (r *roomImpl) Play(playerKey string) {
 			if err != nil {
 				break
 			}
-			if round != numberOfQuestions-1 {
 				<-r.advanceGame
-			}
 		}
 		r.notifyPlayers(
 			func(player Player) {

@@ -10,13 +10,13 @@
     playerSecret: string;
   };
 
-  let username = "";
+  let username = store.get.username$;
   let roomId = "";
   let gameState = store.get.gameState$;
 
   function handleUsernameChange(event: Event) {
     const target = event.target as HTMLInputElement;
-    username = target.value;
+    store.set.username(target.value);
   }
 
   function handleRoomIdChange(event: Event) {
@@ -31,7 +31,7 @@
   function createRoom() {
     handleRPCRequest<{ name: string }, RoomResult>({
       method: "createRoom",
-      params: { name: username },
+      params: { name: $username },
     }).then((data) => {
       store.set.game({
         playerKey: data.result.playerKey,

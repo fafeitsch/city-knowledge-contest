@@ -1,5 +1,4 @@
 import { BehaviorSubject, distinctUntilChanged, map } from "rxjs";
-import Players from "./views/Players.svelte";
 
 export enum GameState {
   SetupUsername = "SetupUsername",
@@ -9,6 +8,7 @@ export enum GameState {
   QuestionCountdown = "QuestionCountdown",
   Question = "Question",
   Finished = "Finished",
+  GameEnded = "GameEnded",
 }
 
 export type Game = {
@@ -184,6 +184,13 @@ export default {
       state$.next({
         ...state$.value,
         gameResult,
+      });
+    },
+    resetGame() {
+      state$.next({
+        ...state,
+        username: state$.value.username,
+        gameState: GameState.SetupMap,
       });
     },
   },
