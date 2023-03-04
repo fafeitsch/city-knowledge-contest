@@ -1,12 +1,12 @@
 <script lang="ts">
-  import L, { latLng, Marker, type LatLng, type Map } from "leaflet";
+  import L, { Icon, latLng, Marker, type LatLng, type Map } from "leaflet";
   import { filter } from "rxjs";
   import { onMount } from "svelte";
   import { environment } from "../environment";
   import { handleRPCRequest } from "../rpc";
   import store, { GameState, type Game } from "../store";
+  import img from "../assets/images/location-dot-solid.svg";
 
-  export let solution: { lat: number; lon: number } | undefined = undefined;
   export let currentResult: number;
   export let game: Game;
 
@@ -16,15 +16,29 @@
     points: number;
   };
 
+  const markerIcon = new Icon({
+    iconUrl: img,
+    iconSize: [55, 75],
+    iconAnchor: [22, 94],
+  });
+
+  let marker: Marker;
+
   onMount(() => {
     mapContainer = createMap();
     store.get.gameResult$
       .pipe(filter((result) => !!result))
       .subscribe((value) => {
-        const marker = new Marker({
-          lat: value.solution[0],
-          lng: value.solution[1],
-        });
+        if (marker !== undefined) {
+          marker.removeFrom(mapContainer);
+        }
+        marker = new Marker(
+          {
+            lat: value.solution[0],
+            lng: value.solution[1],
+          },
+          { icon: markerIcon }
+        );
         mapContainer
           .flyTo(
             {
@@ -66,10 +80,6 @@
       currentResult = data.result.points;
       store.set.gameState(GameState.Finished);
     });
-  }
-
-  if (solution !== undefined) {
-    console.log(solution);
   }
 
   function createMap() {
