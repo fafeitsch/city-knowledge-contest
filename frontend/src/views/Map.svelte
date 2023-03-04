@@ -4,6 +4,8 @@
   import { handleRPCRequest } from "../rpc";
   import Button from "../components/Button.svelte";
   import Leaflet from "../components/Leaflet.svelte";
+  import PartyConfetti  from "../components/PartyConfetti.svelte"
+
 
   let gameState = store.get.gameState$;
   let countdownValue = store.get.countdownValue$;
@@ -42,7 +44,8 @@
         class="d-flex justify-content-spaced align-items-center width-100 p-4"
       >
         {#if currentResult !== 0}
-          <div>Richtig 🥳</div>
+          <div id="party">Richtig 🥳</div>
+          <PartyConfetti/>
         {:else}
           <div>Leider falsch 🤷</div>
         {/if}
