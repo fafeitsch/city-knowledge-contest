@@ -27,18 +27,21 @@ type Room interface {
 	CanBeAdvanced() bool
 	AdvanceToNextQuestion()
 	Key() string
+	Finished() bool
+	Creation() time.Time
 }
 
 type roomImpl struct {
 	mutex           sync.Mutex
 	key             string
-	Creation        time.Time
+	creation        time.Time
 	players         map[string]*Player
 	points          map[string]int
 	random          *rand.Rand
 	options         RoomOptions
 	currentQuestion *Question
 	advanceGame     chan bool
+	finished        bool
 }
 
 func (r *roomImpl) Key() string {
@@ -120,7 +123,7 @@ func (r *roomImpl) Players() []Player {
 func NewRoom() Room {
 	return &roomImpl{
 		key:      keygen.RoomKey(),
-		Creation: time.Now(),
+		creation: time.Now(),
 		random:   rand.New(rand.NewSource(time.Now().Unix())),
 		players:  make(map[string]*Player),
 		options: RoomOptions{
@@ -207,6 +210,7 @@ func (r *roomImpl) Play(playerKey string) {
 		)
 		r.advanceGame = nil
 		r.points = nil
+		r.finished = true
 	}()
 }
 
@@ -319,6 +323,14 @@ func (r *roomImpl) sendCountdowns(amount int, consumer func(Player) func(int)) {
 		)
 		time.Sleep(time.Second)
 	}
+}
+
+func (r *roomImpl) Finished() bool {
+	return r.finished
+}
+
+func (r *roomImpl) Creation() time.Time {
+	return r.creation
 }
 
 type Player struct {

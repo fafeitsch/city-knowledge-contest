@@ -113,7 +113,7 @@ func (s *StreetList) GetRandomStreet(random *rand.Rand) (Street, error) {
 		log.Printf("could not find street \"%s\" in nominatim using url \"%s\"", street, url)
 		return Street{}, err
 	}
-	log.Printf("found street \"%s\" in nominatim using url \"%s\", updating file", street, url)
+	log.Printf("found street \"%s\" in nominatim using url \"%s\"", street, url)
 	lat, _ := strconv.ParseFloat(nominatimResponse[0].Lat, 64)
 	lon, _ := strconv.ParseFloat(nominatimResponse[0].Lon, 64)
 	coordinate := &types.Coordinate{Lat: lat, Lng: lon}

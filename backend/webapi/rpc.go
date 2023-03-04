@@ -259,3 +259,24 @@ func unlockRoom(room contest.Room) func() {
 		}
 	}
 }
+
+func (r *roomContainer) startRoomCleaner() {
+	go func() {
+		for {
+			time.Sleep(time.Second * 5)
+			r.cleanRooms()
+		}
+	}()
+}
+
+func (r *roomContainer) cleanRooms() {
+	r.Lock()
+	defer r.Unlock()
+	now := time.Now()
+	for key, room := range r.openRooms {
+		if room.Finished() || now.Sub(room.Creation()) > time.Hour*24 {
+			log.Printf("cleaning room %s", key)
+			delete(r.openRooms, key)
+		}
+	}
+}
