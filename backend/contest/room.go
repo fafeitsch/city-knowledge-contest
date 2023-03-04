@@ -219,7 +219,7 @@ func (r *roomImpl) playQuestion(round int) error {
 		randomStreet, err = r.options.StreetList.GetRandomStreet(r.random)
 		tries = tries + 1
 	}
-	if tries == 10 && randomStreet.Coordinate == nil {
+	if tries == 10 && len(randomStreet.Lines) == 0 {
 		r.notifyPlayers(
 			func(player Player) {
 				player.NotifyGameEnded("repeatedly failed to get random street", r.points)
@@ -260,7 +260,7 @@ func (r *roomImpl) playQuestion(round int) error {
 	}
 	result := QuestionResult{
 		Question:   randomStreet.Name,
-		Solution:   *randomStreet.Coordinate,
+		Solution:   randomStreet.Lines,
 		PointDelta: r.currentQuestion.points,
 		Points:     r.points,
 	}
@@ -332,7 +332,7 @@ type Player struct {
 
 type QuestionResult struct {
 	Question   string
-	Solution   types.Coordinate
+	Solution   []geodata.Line
 	PointDelta map[string]int
 	Points     map[string]int
 }

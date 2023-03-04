@@ -2,14 +2,15 @@ package webapi
 
 import (
 	"fmt"
-	"github.com/fafeitsch/city-knowledge-contest/backend/contest"
-	"github.com/fafeitsch/city-knowledge-contest/backend/types"
 	"log"
 	"net/http"
-	"nhooyr.io/websocket"
-	"nhooyr.io/websocket/wsjson"
 	"strings"
 	"time"
+
+	"github.com/fafeitsch/city-knowledge-contest/backend/contest"
+	"github.com/fafeitsch/city-knowledge-contest/backend/types"
+	"nhooyr.io/websocket"
+	"nhooyr.io/websocket/wsjson"
 )
 
 func (r *roomContainer) upgradeToWebSocket(writer http.ResponseWriter, request *http.Request, options Options) error {
@@ -130,14 +131,24 @@ func (w *websocketNotifier) NotifyAnswerTimeCountdown(followUps int) {
 }
 
 func (w *websocketNotifier) NotifyQuestionResults(result contest.QuestionResult) {
+	var solution [][][2]float64
+	for _, line := range result.Solution {
+		var linePoints [][2]float64
+		for _, points := range line.Coordinates {
+			linePoints = append(linePoints, [2]float64{
+				points.Lat,
+				points.Lng,
+			})
+		}
+
+		solution = append(solution, linePoints)
+	}
+
 	message := map[string]any{
 		"question": result.Question,
-		"solution": [2]float64{
-			result.Solution.Lat,
-			result.Solution.Lng,
-		},
-		"delta":  result.PointDelta,
-		"points": result.Points,
+		"solution": solution,
+		"delta":    result.PointDelta,
+		"points":   result.Points,
 	}
 	w.write(websocketMessage{Topic: "questionFinished", Payload: message})
 }
