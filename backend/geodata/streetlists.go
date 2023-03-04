@@ -8,7 +8,6 @@ import (
 	"log"
 	"math/rand"
 	url2 "net/url"
-	"os"
 	"path/filepath"
 	"strconv"
 	"sync"
@@ -81,7 +80,7 @@ type StreetList struct {
 	City     string           `json:"city"`
 	Name     string           `json:"name"`
 	Center   types.Coordinate `json:"center"`
-	Streets  []Street         `json:"streets"`
+	Streets  []string         `json:"streets"`
 }
 
 type Street struct {
@@ -89,20 +88,17 @@ type Street struct {
 	Coordinate *types.Coordinate `json:"coord"`
 }
 
-func (s *StreetList) GetRandomStreet(random *rand.Rand) Street {
+func (s *StreetList) GetRandomStreet(random *rand.Rand) (Street, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	index := random.Intn(len(s.Streets))
 	street := s.Streets[index]
-	if street.Coordinate != nil {
-		return street
-	}
 	template := NominatimServer + "/search?street=%s&format=json&city=%s&country=%s"
-	url := fmt.Sprintf(template, url2.QueryEscape(street.Name), url2.QueryEscape(s.City), url2.QueryEscape(s.Country))
+	url := fmt.Sprintf(template, url2.QueryEscape(street), url2.QueryEscape(s.City), url2.QueryEscape(s.Country))
 	response, err := client.Get(url)
 	if err != nil {
 		log.Printf("could not query nominatim using url \"%s\": %v", url, err)
-		return street
+		return Street{}, err
 	}
 	var nominatimResponse []struct {
 		Lat string `json:"lat"`
@@ -111,27 +107,15 @@ func (s *StreetList) GetRandomStreet(random *rand.Rand) Street {
 	err = json.NewDecoder(response.Body).Decode(&nominatimResponse)
 	if err != nil {
 		log.Printf("could not parse response from nominatim, using url \"%s\": %v", url, err)
-		return street
+		return Street{}, err
 	}
 	if len(nominatimResponse) == 0 {
-		log.Printf("could not find street \"%s\" in nominatim using url \"%s\"", street.Name, url)
-		return street
+		log.Printf("could not find street \"%s\" in nominatim using url \"%s\"", street, url)
+		return Street{}, err
 	}
-	log.Printf("found street \"%s\" in nominatim using url \"%s\", updating file", street.Name, url)
+	log.Printf("found street \"%s\" in nominatim using url \"%s\", updating file", street, url)
 	lat, _ := strconv.ParseFloat(nominatimResponse[0].Lat, 64)
 	lon, _ := strconv.ParseFloat(nominatimResponse[0].Lon, 64)
-	street.Coordinate = &types.Coordinate{Lat: lat, Lng: lon}
-	s.Streets[index] = street
-	fileContent, _ := json.MarshalIndent(s, "", " ")
-	file, err := os.OpenFile(filepath.Join(StreetListDirectory, s.fileName), os.O_WRONLY|os.O_TRUNC, 0644)
-	if err != nil {
-		log.Printf("could not open file \"%s\": %v", s.fileName, err)
-		return street
-	}
-	_, err = file.Write(fileContent)
-	if err != nil {
-		log.Printf("could not write file \"%s\": %v", s.fileName, err)
-		return street
-	}
-	return street
+	coordinate := &types.Coordinate{Lat: lat, Lng: lon}
+	return Street{Name: street, Coordinate: coordinate}, nil
 }

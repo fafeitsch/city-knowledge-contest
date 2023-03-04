@@ -214,9 +214,9 @@ func (r *roomImpl) Play(playerKey string) {
 
 func (r *roomImpl) playQuestion(round int) error {
 	tries := 0
-	randomStreet := r.options.StreetList.GetRandomStreet(r.random)
-	for tries < 10 && randomStreet.Coordinate == nil {
-		randomStreet = r.options.StreetList.GetRandomStreet(r.random)
+	randomStreet, err := r.options.StreetList.GetRandomStreet(r.random)
+	for tries < 10 && err != nil {
+		randomStreet, err = r.options.StreetList.GetRandomStreet(r.random)
 		tries = tries + 1
 	}
 	if tries == 10 && randomStreet.Coordinate == nil {
