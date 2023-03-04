@@ -2,13 +2,14 @@ package contest
 
 import (
 	"fmt"
-	"github.com/fafeitsch/city-knowledge-contest/backend/geodata"
-	"github.com/fafeitsch/city-knowledge-contest/backend/keygen"
-	"github.com/fafeitsch/city-knowledge-contest/backend/types"
 	"math"
 	"math/rand"
 	"sync"
 	"time"
+
+	"github.com/fafeitsch/city-knowledge-contest/backend/geodata"
+	"github.com/fafeitsch/city-knowledge-contest/backend/keygen"
+	"github.com/fafeitsch/city-knowledge-contest/backend/types"
 )
 
 type Room interface {
@@ -185,7 +186,7 @@ func (r *roomImpl) Play(playerKey string) {
 	}
 	r.notifyPlayers(
 		func(player Player) {
-			player.NotifyGameStarted(startPlayer.Name, r.options.StreetList.Center)
+			player.NotifyGameStarted(startPlayer.Key, r.options.StreetList.Center)
 		},
 	)
 	numberOfQuestions := r.options.NumberOfQuestions
@@ -339,7 +340,7 @@ type QuestionResult struct {
 type Notifier interface {
 	NotifyPlayerJoined(string, string)
 	NotifyRoomUpdated(RoomOptions, string)
-	NotifyGameStarted(string, types.Coordinate)
+	NotifyGameStarted(playerKey string, center types.Coordinate)
 	NotifyPlayerAnswered(string)
 	NotifyQuestionCountdown(int)
 	NotifyQuestion(string)
