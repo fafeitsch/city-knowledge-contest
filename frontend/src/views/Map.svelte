@@ -1,11 +1,9 @@
 <script lang="ts">
-  import { GameState, type Game } from "../store";
-  import store from "../store";
-  import { handleRPCRequest } from "../rpc";
+  import store, {type Game, GameState} from "../store";
+  import {handleRPCRequest} from "../rpc";
   import Button from "../components/Button.svelte";
   import Leaflet from "../components/Leaflet.svelte";
-  import PartyConfetti  from "../components/PartyConfetti.svelte"
-
+  import PartyConfetti from "../components/PartyConfetti.svelte"
 
   let gameState = store.get.gameState$;
   let countdownValue = store.get.countdownValue$;
@@ -14,18 +12,16 @@
   let gameResult = store.get.gameResult$;
 
   let currentResult: number = 0;
+
   function advanceGame(game: Game) {
-    handleRPCRequest<
-      { playerKey: string; playerSecret: string; roomKey: string },
-      {}
-    >({
-      method: "advanceGame",
-      params: {
+    handleRPCRequest<undefined>(
+      "advanceGame",
+      {
         playerKey: game.playerKey,
         playerSecret: game.playerSecret,
-        roomKey: game.roomId,
-      },
-    }).then((data) => console.log(data));
+        roomKey: game.roomKey,
+      }
+    );
   }
 </script>
 
@@ -33,7 +29,7 @@
   {#if $gameState === GameState.QuestionCountdown}
     <div class="overlay">{$countdownValue}</div>
   {/if}
-  <Leaflet game={$game} bind:currentResult />
+  <Leaflet game={$game} bind:currentResult/>
   {#if $gameState === GameState.Question}
     <div class="container">
       <div>Suche den Ort {$question}</div>
@@ -50,7 +46,7 @@
           <div>Leider falsch 🤷</div>
         {/if}
         {#if $gameResult !== undefined}
-          <Button on:click={() => advanceGame($game)} title="Weiter" />
+          <Button on:click={() => advanceGame($game)} title="Weiter"/>
         {/if}
       </div>
     </div>

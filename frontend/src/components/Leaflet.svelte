@@ -1,13 +1,12 @@
 <script lang="ts">
-  import L, { Icon, latLng, Marker, type LatLng, type Map } from "leaflet";
-  import { filter } from "rxjs";
-  import { onMount } from "svelte";
-  import { environment } from "../environment";
-  import { handleRPCRequest } from "../rpc";
-  import store, { GameState, type Game } from "../store";
+  import L, {Icon, latLng, type LatLng, type Map, Marker} from "leaflet";
+  import {filter} from "rxjs";
+  import {onMount} from "svelte";
+  import {environment} from "../environment";
+  import {handleRPCRequest} from "../rpc";
+  import store, {type Game, GameState} from "../store";
   import img from "../assets/images/pin.png";
 
-  export let currentResult: number;
   export let game: Game;
 
   let mapContainer: Map;
@@ -37,7 +36,7 @@
             lat: value.solution[0],
             lng: value.solution[1],
           },
-          { icon: markerIcon }
+          {icon: markerIcon}
         );
         mapContainer
           .flyTo(
@@ -60,24 +59,15 @@
   });
 
   function answerQuestion(guess: LatLng) {
-    handleRPCRequest<
+    handleRPCRequest<AnswerQuestion>(
+      "answerQuestion",
       {
-        playerKey: string;
-        roomKey: string;
-        playerSecret: string;
-        guess: Array<number>;
-      },
-      AnswerQuestion
-    >({
-      method: "answerQuestion",
-      params: {
         playerKey: game.playerKey,
-        roomKey: game.roomId,
+        roomKey: game.roomKey,
         playerSecret: game.playerSecret,
         guess: [guess.lat, guess.lng],
       },
-    }).then((data) => {
-      currentResult = data.result.points;
+    ).then(() => {
       store.set.gameState(GameState.Finished);
     });
   }
@@ -92,7 +82,7 @@
       maxZoom: 20,
     }).addTo(map);
 
-    map.flyTo({ lat: 49.79465390310462, lng: 9.929384801847446 }, 16);
+    map.flyTo({lat: 49.79465390310462, lng: 9.929384801847446}, 16);
 
     map.addEventListener("click", (e) => answerQuestion(e.latlng));
 
@@ -100,4 +90,4 @@
   }
 </script>
 
-<div id="mapContainer" class="map full-viewheight full-viewwidth" />
+<div id="mapContainer" class="map full-viewheight full-viewwidth"/>
