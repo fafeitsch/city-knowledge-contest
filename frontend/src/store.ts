@@ -14,8 +14,6 @@ export enum GameState {
   SetupUsername = "SetupUsername",
   SetupMap = "SetupMap",
   Waiting = "Waiting",
-  Started = "Started",
-  QuestionCountdown = "QuestionCountdown",
   Question = "Question",
   Finished = "Finished",
   GameEnded = "GameEnded",
@@ -46,13 +44,13 @@ export type GameResult = {
 
 interface State {
   username: string;
-  gameState: GameState;
   players: Player[];
-  countdownValue: string;
+  countdownValue: number;
   question: string;
-  game: Game | undefined;
+  room: Game | undefined;
   gameResult: GameResult | undefined;
   gameConfiguration: GameConfiguration | undefined;
+  lastResult: number | undefined;
   gameErrors: string[];
 }
 
@@ -65,11 +63,11 @@ export interface GameConfiguration {
 const state: State = {
   username: undefined,
   countdownValue: undefined,
-  gameState: GameState.SetupUsername,
   players: [],
   question: undefined,
-  game: undefined,
+  room: undefined,
   gameResult: undefined,
+  lastResult: undefined,
   gameConfiguration: undefined,
   gameErrors: ["notInitialized"],
 };
@@ -78,20 +76,35 @@ const state$ = new BehaviorSubject<State>(state);
 
 const store = {
   get: {
-    authData$: state$.pipe(
-      map((state) =>
-        state.game
-          ? {
-              playerKey: state.game.playerKey,
-              playerSecret: state.game.playerSecret,
-              roomKey: state.game.roomKey,
-            }
-          : undefined
-      ),
-      distinctUntilChanged()
-    ),
     gameState$: state$.pipe(
-      map((state) => state.gameState),
+      map((state) => {
+        if (!state.username) {
+          return GameState.SetupUsername;
+        }
+        if (!state.room?.roomKey && !state.gameResult) {
+          return GameState.SetupMap;
+        }
+        if (
+          state.countdownValue === undefined &&
+          !state.question &&
+          state.lastResult === undefined &&
+          !state.gameResult
+        ) {
+          return GameState.Waiting;
+        }
+        if (
+          (state.countdownValue || state.question) &&
+          state.lastResult === undefined
+        ) {
+          return GameState.Question;
+        }
+        if (state.lastResult !== undefined) {
+          return GameState.Finished;
+        }
+        if (state.gameResult && !state.room) {
+          return GameState.GameEnded;
+        }
+      }),
       distinctUntilChanged()
     ),
     players$: state$.pipe(
@@ -106,12 +119,16 @@ const store = {
       map((state) => state.question),
       distinctUntilChanged()
     ),
-    game$: state$.pipe(
-      map((state) => state.game),
+    room$: state$.pipe(
+      map((state) => state.room),
       distinctUntilChanged()
     ),
     gameResult$: state$.pipe(
       map((state) => state.gameResult),
+      distinctUntilChanged()
+    ),
+    lastResult$: state$.pipe(
+      map((state) => state.lastResult),
       distinctUntilChanged()
     ),
     gameConfiguration$: state$.pipe(
@@ -130,10 +147,10 @@ const store = {
         username,
       });
     },
-    gameState(gameState: GameState) {
+    lastResult(result: number) {
       state$.next({
         ...state$.value,
-        gameState,
+        lastResult: result,
       });
     },
     players(players: Player[]) {
@@ -151,18 +168,17 @@ const store = {
     },
     updatePlayerRanking(gameResult: GameResult) {
       const newPlayers = state$.value.players
-        .map((player) => {
-          return { ...player, points: gameResult.points[player.playerKey] };
-        })
-        .sort((playerA, playerB) => {
-          return playerA.points > playerB.points ? -1 : 1;
-        });
+        .map((player) => ({
+          ...player,
+          points: gameResult.points[player.playerKey],
+        }))
+        .sort((playerA, playerB) => playerA.points - playerB.points);
       state$.next({
         ...state$.value,
         players: newPlayers,
       });
     },
-    countdownValue(countdownValue: string) {
+    countdownValue(countdownValue: number) {
       state$.next({
         ...state$.value,
         countdownValue,
@@ -177,7 +193,7 @@ const store = {
     game(game: Game) {
       state$.next({
         ...state$.value,
-        game,
+        room: game,
       });
     },
     gameResult(gameResult: GameResult) {
@@ -190,7 +206,6 @@ const store = {
       state$.next({
         ...state,
         username: state$.value.username,
-        gameState: GameState.SetupMap,
       });
     },
     streetList(fileName: string) {
@@ -211,12 +226,7 @@ const store = {
   },
   methods: {
     async startGame() {
-      await handleRPCRequest<undefined>("startGame", {
-        playerKey: state$.value.game.playerKey,
-        roomKey: state$.value.game.roomKey,
-        playerSecret: state$.value.game.playerSecret,
-      });
-      store.set.gameState(GameState.Started);
+      await handleRPCRequest<undefined>("startGame", state$.value.room);
     },
     async createRoom() {
       const data = await handleRPCRequest<{
@@ -227,19 +237,31 @@ const store = {
         name: state$.value.username,
       });
       store.set.game(data);
-      store.set.gameState(GameState.Waiting);
     },
     async joinRoom(roomKey: string) {
-      await handleRPCRequest<{ playerKey: string; playerSecret: string }>(
-        "joinRoom",
-        {
-          name: state$.value.username,
-          roomKey,
-        }
-      ).then((data) => {
-        store.set.game({ ...data, roomKey: roomKey });
-        store.set.gameState(GameState.Waiting);
+      const data = await handleRPCRequest<{
+        playerKey: string;
+        playerSecret: string;
+      }>("joinRoom", {
+        name: state$.value.username,
+        roomKey,
       });
+      store.set.game({ ...data, roomKey: roomKey });
+    },
+    async answerQuestion(guess: number[]) {
+      const data = await handleRPCRequest<{ points: number }>(
+        "answerQuestion",
+        {
+          ...state$.value.room,
+          guess,
+        }
+      );
+      store.set.lastResult(data.points);
+    },
+    async advanceGame() {
+      await handleRPCRequest("advanceGame", state$.value.room);
+      store.set.lastResult(undefined);
+      store.set.question(undefined);
     },
   },
 };
@@ -249,7 +271,7 @@ export default store;
 store.get.gameConfiguration$
   .pipe(
     filter((config) => !!config),
-    withLatestFrom(store.get.authData$.pipe(filter((authData) => !!authData))),
+    withLatestFrom(store.get.room$.pipe(filter((authData) => !!authData))),
     switchMap(([config, authData]) =>
       doRpc<{ errors: string[] }>("updateRoom", {
         ...authData,
