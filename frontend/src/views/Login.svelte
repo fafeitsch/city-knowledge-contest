@@ -1,7 +1,7 @@
 <script lang="ts">
 import Button from "../components/Button.svelte";
 import Input from "../components/Input.svelte";
-import store, { GameState } from "../store";
+import store from "../store";
 
 let roomKey = "";
 let userName = "";
@@ -30,7 +30,7 @@ async function joinRoom() {
 }
 </script>
 
-{#if $gameState === GameState.SetupUsername}
+{#if $gameState === "SetupUsername"}
   <div class="d-flex flex-column gap-3 align-items-center">
     <Input
       on:change="{handleUsernameChange}"
@@ -38,7 +38,7 @@ async function joinRoom() {
     />
     <Button on:click="{handleOnClick}" title="Los geht's" />
   </div>
-{:else if $gameState === GameState.SetupMap}
+{:else if $gameState === "SetupMap"}
   <div class="d-flex gap-5 align-items-center">
     <div class="d-flex flex-column gap-2 align-items-center">
       <Input

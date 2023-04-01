@@ -1,5 +1,5 @@
-import { environment } from "./environment";
-import { defer, map, Observable, switchMap } from "rxjs";
+import { environment } from './environment';
+import { defer, map, Observable, switchMap } from 'rxjs';
 
 type Response<T> = {
   jsonrpc: string;
@@ -22,7 +22,7 @@ export function doRpc<ResponseType>(
 ): Observable<ResponseType> {
   return defer(() =>
     fetch(environment[import.meta.env.MODE].apiUrl, {
-      method: "POST",
+      method: 'POST',
       body: JSON.stringify({
         method,
         params,
@@ -45,7 +45,7 @@ export async function handleRPCRequest<ResponseType>(
   params: any
 ) {
   return fetch(environment[import.meta.env.MODE].apiUrl, {
-    method: "POST",
+    method: 'POST',
     body: JSON.stringify({
       method,
       params,

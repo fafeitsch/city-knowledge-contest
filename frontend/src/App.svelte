@@ -1,7 +1,7 @@
 <script lang="ts">
 import Login from "./views/Login.svelte";
-import store, { GameState } from "./store";
-import { combineLatest, filter } from "rxjs";
+import store from "./store";
+import { filter } from "rxjs";
 import Game from "./views/Game.svelte";
 import { environment } from "./environment";
 
@@ -39,7 +39,7 @@ function initWebSocket() {
 initWebSocket();
 </script>
 
-{#if $gameState === GameState.SetupUsername || $gameState === GameState.SetupMap}
+{#if $gameState === "SetupUsername" || $gameState === "SetupMap"}
   <div class="d-flex flex-column gap-4 align-items-center">
     <h1 class="old-font">City Knowledge Contest</h1>
     <p class="mb-5 fs-large">Wer findet die gesuchten Orte am schnellsten?</p>

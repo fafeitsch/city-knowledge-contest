@@ -7,17 +7,16 @@ import {
   of,
   switchMap,
   withLatestFrom,
-} from "rxjs";
-import { doRpc, handleRPCRequest } from "./rpc";
+} from 'rxjs';
+import { doRpc, handleRPCRequest } from './rpc';
 
-export enum GameState {
-  SetupUsername = "SetupUsername",
-  SetupMap = "SetupMap",
-  Waiting = "Waiting",
-  Question = "Question",
-  Finished = "Finished",
-  GameEnded = "GameEnded",
-}
+export type GameState =
+  | 'SetupUsername'
+  | 'SetupMap'
+  | 'Waiting'
+  | 'Question'
+  | 'Finished'
+  | 'GameEnded';
 
 export type Game = {
   playerKey: string;
@@ -69,7 +68,7 @@ const state: State = {
   gameResult: undefined,
   lastResult: undefined,
   gameConfiguration: undefined,
-  gameErrors: ["notInitialized"],
+  gameErrors: ['notInitialized'],
 };
 
 const state$ = new BehaviorSubject<State>(state);
@@ -77,12 +76,12 @@ const state$ = new BehaviorSubject<State>(state);
 const store = {
   get: {
     gameState$: state$.pipe(
-      map((state) => {
+      map<State, GameState>((state) => {
         if (!state.username) {
-          return GameState.SetupUsername;
+          return 'SetupUsername';
         }
         if (!state.room?.roomKey && !state.gameResult) {
-          return GameState.SetupMap;
+          return 'SetupMap';
         }
         if (
           state.countdownValue === undefined &&
@@ -90,19 +89,19 @@ const store = {
           state.lastResult === undefined &&
           !state.gameResult
         ) {
-          return GameState.Waiting;
+          return 'Waiting';
         }
         if (
           (state.countdownValue || state.question) &&
           state.lastResult === undefined
         ) {
-          return GameState.Question;
+          return 'Question';
         }
         if (state.lastResult !== undefined) {
-          return GameState.Finished;
+          return 'Finished';
         }
         if (state.gameResult && !state.room) {
-          return GameState.GameEnded;
+          return 'GameEnded';
         }
       }),
       distinctUntilChanged()
@@ -226,14 +225,14 @@ const store = {
   },
   methods: {
     async startGame() {
-      await handleRPCRequest<undefined>("startGame", state$.value.room);
+      await handleRPCRequest<undefined>('startGame', state$.value.room);
     },
     async createRoom() {
       const data = await handleRPCRequest<{
         roomKey: string;
         playerKey: string;
         playerSecret: string;
-      }>("createRoom", {
+      }>('createRoom', {
         name: state$.value.username,
       });
       store.set.game(data);
@@ -242,7 +241,7 @@ const store = {
       const data = await handleRPCRequest<{
         playerKey: string;
         playerSecret: string;
-      }>("joinRoom", {
+      }>('joinRoom', {
         name: state$.value.username,
         roomKey,
       });
@@ -250,7 +249,7 @@ const store = {
     },
     async answerQuestion(guess: number[]) {
       const data = await handleRPCRequest<{ points: number }>(
-        "answerQuestion",
+        'answerQuestion',
         {
           ...state$.value.room,
           guess,
@@ -259,7 +258,7 @@ const store = {
       store.set.lastResult(data.points);
     },
     async advanceGame() {
-      await handleRPCRequest("advanceGame", state$.value.room);
+      await handleRPCRequest('advanceGame', state$.value.room);
       store.set.lastResult(undefined);
       store.set.question(undefined);
     },
@@ -273,7 +272,7 @@ store.get.gameConfiguration$
     filter((config) => !!config),
     withLatestFrom(store.get.room$.pipe(filter((authData) => !!authData))),
     switchMap(([config, authData]) =>
-      doRpc<{ errors: string[] }>("updateRoom", {
+      doRpc<{ errors: string[] }>('updateRoom', {
         ...authData,
         ...config,
         maxAnswerTimeSec: 30,
@@ -283,7 +282,7 @@ store.get.gameConfiguration$
     map((result) => result.errors),
     catchError((err) => {
       console.error(err);
-      return of(["noConnection"]);
+      return of(['noConnection']);
     })
   )
   .subscribe(async (result) => {
