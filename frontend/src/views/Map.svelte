@@ -1,5 +1,5 @@
 <style lang="scss">
-@import "../styles/variables";
+@import '../styles/variables';
 
 .overlay {
   z-index: 10000;
@@ -30,10 +30,10 @@
 </style>
 
 <script lang="ts">
-import store from "../store";
-import Button from "../components/Button.svelte";
-import Leaflet from "../components/Leaflet.svelte";
-import PartyConfetti from "../components/PartyConfetti.svelte";
+import store from '../store';
+import Button from '../components/Button.svelte';
+import Leaflet from '../components/Leaflet.svelte';
+import PartyConfetti from '../components/PartyConfetti.svelte';
 
 let countdownValue = store.get.countdownValue$;
 let question = store.get.question$;
@@ -55,9 +55,7 @@ async function advanceGame() {
     </div>
   {:else if $lastResult !== undefined}
     <div class="container">
-      <div
-        class="d-flex justify-content-spaced align-items-center width-100 p-4"
-      >
+      <div class="d-flex justify-content-spaced align-items-center width-100 p-4">
         {#if $lastResult !== 0}
           <div id="party">Richtig 🥳</div>
           <PartyConfetti />

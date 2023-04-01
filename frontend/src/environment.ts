@@ -1,7 +1,4 @@
-export const environment: Record<
-  string,
-  { wsUrl: string; apiUrl: string; tileUrl: string }
-> = {
+export const environment: Record<string, { wsUrl: string; apiUrl: string; tileUrl: string }> = {
   development: {
     wsUrl: 'ws://localhost:23123/ws/',
     apiUrl: 'http://localhost:23123/rpc',

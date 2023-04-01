@@ -1,22 +1,7 @@
-import {
-  BehaviorSubject,
-  catchError,
-  distinctUntilChanged,
-  filter,
-  map,
-  of,
-  switchMap,
-  withLatestFrom,
-} from 'rxjs';
+import { BehaviorSubject, catchError, distinctUntilChanged, filter, map, of, switchMap, withLatestFrom } from 'rxjs';
 import { doRpc, handleRPCRequest } from './rpc';
 
-export type GameState =
-  | 'SetupUsername'
-  | 'SetupMap'
-  | 'Waiting'
-  | 'Question'
-  | 'Finished'
-  | 'GameEnded';
+export type GameState = 'SetupMap' | 'Waiting' | 'Question' | 'Finished' | 'GameEnded';
 
 export type Game = {
   playerKey: string;
@@ -42,7 +27,6 @@ export type GameResult = {
 };
 
 interface State {
-  username: string;
   players: Player[];
   countdownValue: number;
   question: string;
@@ -60,7 +44,6 @@ export interface GameConfiguration {
 }
 
 const state: State = {
-  username: undefined,
   countdownValue: undefined,
   players: [],
   question: undefined,
@@ -77,9 +60,6 @@ const store = {
   get: {
     gameState$: state$.pipe(
       map<State, GameState>((state) => {
-        if (!state.username) {
-          return 'SetupUsername';
-        }
         if (!state.room?.roomKey && !state.gameResult) {
           return 'SetupMap';
         }
@@ -91,10 +71,7 @@ const store = {
         ) {
           return 'Waiting';
         }
-        if (
-          (state.countdownValue || state.question) &&
-          state.lastResult === undefined
-        ) {
+        if ((state.countdownValue || state.question) && state.lastResult === undefined) {
           return 'Question';
         }
         if (state.lastResult !== undefined) {
@@ -104,48 +81,42 @@ const store = {
           return 'GameEnded';
         }
       }),
-      distinctUntilChanged()
+      distinctUntilChanged(),
     ),
     players$: state$.pipe(
       map((state) => state.players),
-      distinctUntilChanged()
+      distinctUntilChanged(),
     ),
     countdownValue$: state$.pipe(
       map((state) => state.countdownValue),
-      distinctUntilChanged()
+      distinctUntilChanged(),
     ),
     question$: state$.pipe(
       map((state) => state.question),
-      distinctUntilChanged()
+      distinctUntilChanged(),
     ),
     room$: state$.pipe(
       map((state) => state.room),
-      distinctUntilChanged()
+      distinctUntilChanged(),
     ),
     gameResult$: state$.pipe(
       map((state) => state.gameResult),
-      distinctUntilChanged()
+      distinctUntilChanged(),
     ),
     lastResult$: state$.pipe(
       map((state) => state.lastResult),
-      distinctUntilChanged()
+      distinctUntilChanged(),
     ),
     gameConfiguration$: state$.pipe(
       map((state) => state.gameConfiguration),
-      distinctUntilChanged()
+      distinctUntilChanged(),
     ),
     errors$: state$.pipe(
       map((state) => state.gameErrors),
-      distinctUntilChanged()
+      distinctUntilChanged(),
     ),
   },
   set: {
-    username(username: string | undefined) {
-      state$.next({
-        ...state$.value,
-        username,
-      });
-    },
     lastResult(result: number) {
       state$.next({
         ...state$.value,
@@ -204,7 +175,6 @@ const store = {
     resetGame() {
       state$.next({
         ...state,
-        username: state$.value.username,
       });
     },
     streetList(fileName: string) {
@@ -227,34 +197,31 @@ const store = {
     async startGame() {
       await handleRPCRequest<undefined>('startGame', state$.value.room);
     },
-    async createRoom() {
+    async createRoom(username: string) {
       const data = await handleRPCRequest<{
         roomKey: string;
         playerKey: string;
         playerSecret: string;
       }>('createRoom', {
-        name: state$.value.username,
+        name: username,
       });
       store.set.game(data);
     },
-    async joinRoom(roomKey: string) {
+    async joinRoom(roomKey: string, username: string) {
       const data = await handleRPCRequest<{
         playerKey: string;
         playerSecret: string;
       }>('joinRoom', {
-        name: state$.value.username,
+        name: username,
         roomKey,
       });
       store.set.game({ ...data, roomKey: roomKey });
     },
     async answerQuestion(guess: number[]) {
-      const data = await handleRPCRequest<{ points: number }>(
-        'answerQuestion',
-        {
-          ...state$.value.room,
-          guess,
-        }
-      );
+      const data = await handleRPCRequest<{ points: number }>('answerQuestion', {
+        ...state$.value.room,
+        guess,
+      });
       store.set.lastResult(data.points);
     },
     async advanceGame() {
@@ -277,13 +244,13 @@ store.get.gameConfiguration$
         ...config,
         maxAnswerTimeSec: 30,
         numberOfQuestions: 2,
-      })
+      }),
     ),
     map((result) => result.errors),
     catchError((err) => {
       console.error(err);
       return of(['noConnection']);
-    })
+    }),
   )
   .subscribe(async (result) => {
     store.set.gameErrors(result);
