@@ -62,3 +62,20 @@ export function updateRoomConfiguration(configuration: RoomConfiguration): Obser
     }),
   );
 }
+
+export function answerQuestion(guess: [number, number]): Observable<number> {
+  return store.get.room$.pipe(
+    take(1),
+    switchMap((authData) =>
+      doRpc<{ points: number }>('answerQuestion', {
+        ...authData,
+        guess,
+      }),
+    ),
+    map((result) => result.points),
+    catchError((err) => {
+      console.error(err);
+      return of(0);
+    }),
+  );
+}

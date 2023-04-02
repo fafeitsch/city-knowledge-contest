@@ -1,4 +1,4 @@
-import { BehaviorSubject, distinctUntilChanged, map } from 'rxjs';
+import { BehaviorSubject, distinctUntilChanged, map, tap } from 'rxjs';
 import { handleRPCRequest } from './rpc';
 
 export type GameState = 'SetupMap' | 'Waiting' | 'Question' | 'Finished' | 'GameEnded';
@@ -32,7 +32,6 @@ interface State {
   question: string;
   room: Game | undefined;
   gameResult: GameResult | undefined;
-  lastResult: number | undefined;
 }
 
 const state: State = {
@@ -41,7 +40,6 @@ const state: State = {
   question: undefined,
   room: undefined,
   gameResult: undefined,
-  lastResult: undefined,
 };
 
 const state$ = new BehaviorSubject<State>(state);
@@ -50,21 +48,17 @@ const store = {
   get: {
     gameState$: state$.pipe(
       map<State, GameState>((state) => {
+        console.log(state);
         if (!state.room?.roomKey && !state.gameResult) {
           return 'SetupMap';
         }
-        if (
-          state.countdownValue === undefined &&
-          !state.question &&
-          state.lastResult === undefined &&
-          !state.gameResult
-        ) {
+        if (state.countdownValue === undefined && !state.question && !state.gameResult) {
           return 'Waiting';
         }
-        if ((state.countdownValue || state.question) && state.lastResult === undefined) {
+        if (!state.gameResult) {
           return 'Question';
         }
-        if (state.lastResult !== undefined) {
+        if (state.gameResult && state.room) {
           return 'Finished';
         }
         if (state.gameResult && !state.room) {
@@ -72,6 +66,7 @@ const store = {
         }
       }),
       distinctUntilChanged(),
+      tap((x) => console.log(x)),
     ),
     players$: state$.pipe(
       map((state) => state.players),
@@ -93,18 +88,8 @@ const store = {
       map((state) => state.gameResult),
       distinctUntilChanged(),
     ),
-    lastResult$: state$.pipe(
-      map((state) => state.lastResult),
-      distinctUntilChanged(),
-    ),
   },
   set: {
-    lastResult(result: number) {
-      state$.next({
-        ...state$.value,
-        lastResult: result,
-      });
-    },
     players(players: Player[]) {
       state$.next({
         ...state$.value,
@@ -152,7 +137,6 @@ const store = {
       state$.next({
         ...state$.value,
         gameResult,
-        lastResult: state$.value.lastResult || 0,
       });
     },
     resetGame() {
@@ -185,16 +169,8 @@ const store = {
       });
       store.set.game({ ...data, roomKey: roomKey });
     },
-    async answerQuestion(guess: number[]) {
-      const data = await handleRPCRequest<{ points: number }>('answerQuestion', {
-        ...state$.value.room,
-        guess,
-      });
-      store.set.lastResult(data.points);
-    },
     async advanceGame() {
       await handleRPCRequest('advanceGame', state$.value.room);
-      store.set.lastResult(undefined);
       store.set.question(undefined);
     },
   },

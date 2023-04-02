@@ -1,7 +1,7 @@
 <script lang="ts">
 import L, { Icon, latLng, type LatLng, type Map, Marker } from 'leaflet';
 import { filter } from 'rxjs';
-import { onMount } from 'svelte';
+import { createEventDispatcher, onMount } from 'svelte';
 import { environment } from '../../environment';
 import store from '../../store';
 import img from '../../assets/images/pin.png';
@@ -15,6 +15,8 @@ const markerIcon = new Icon({
 });
 
 let marker: Marker;
+
+let dispatch = createEventDispatcher();
 
 onMount(() => {
   mapContainer = createMap();
@@ -49,10 +51,6 @@ onMount(() => {
   };
 });
 
-function answerQuestion(guess: LatLng) {
-  store.methods.answerQuestion([guess.lat, guess.lng]);
-}
-
 function createMap() {
   const map = L.map('mapContainer').setView(latLng(50, 10), 5);
 
@@ -65,7 +63,7 @@ function createMap() {
 
   map.flyTo({ lat: 49.79465390310462, lng: 9.929384801847446 }, 16);
 
-  map.addEventListener('click', (e) => answerQuestion(e.latlng));
+  map.addEventListener('click', (e) => dispatch('answerQuestion', [e.latlng.lat, e.latlng.lng]));
 
   return map;
 }

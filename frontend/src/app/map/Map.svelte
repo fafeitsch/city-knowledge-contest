@@ -35,14 +35,30 @@ import PartyConfetti from '../../components/PartyConfetti.svelte';
 import Button from '../../components/Button.svelte';
 import Leaflet from './Leaflet.svelte';
 import Players from '../../components/Players.svelte';
+import { of, Subject, switchMap } from 'rxjs';
+import { answerQuestion } from '../../rpc';
 
 let countdownValue = store.get.countdownValue$;
 let question = store.get.question$;
-let lastResult = store.get.lastResult$;
+let guess = new Subject<[number, number] | undefined>();
+let lastResult = guess.pipe(
+  switchMap((guess) => {
+    if (!guess) {
+      return of(undefined);
+    }
+    return answerQuestion(guess);
+  }),
+);
 let players = store.get.players$;
+let gameState = store.get.gameState$;
 
 async function advanceGame() {
+  guess.next(undefined);
   await store.methods.advanceGame();
+}
+
+function onAnswerQuestion(event: CustomEvent) {
+  guess.next(event.detail);
 }
 </script>
 
@@ -51,7 +67,7 @@ async function advanceGame() {
   {#if $countdownValue}
     <div class="overlay">{$countdownValue}</div>
   {/if}
-  <Leaflet />
+  <Leaflet on:answerQuestion="{onAnswerQuestion}" />
   {#if $question && $lastResult === undefined}
     <div class="container">
       <div>Suche den Ort {$question}</div>
@@ -65,7 +81,9 @@ async function advanceGame() {
         {:else}
           <div>Leider falsch 🤷</div>
         {/if}
-        <Button on:click="{() => advanceGame()}" title="Weiter" />
+        {#if $gameState === 'Finished'}
+          <Button on:click="{() => advanceGame()}" title="Weiter" />
+        {/if}
       </div>
     </div>
   {/if}

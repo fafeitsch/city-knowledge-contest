@@ -194,21 +194,21 @@ func (r *roomImpl) Play(playerKey string) {
 	)
 	numberOfQuestions := r.options.NumberOfQuestions
 	r.points = make(map[string]int)
-	r.advanceGame = make(chan bool)
 	go func() {
 		for round := 0; round < numberOfQuestions; round++ {
 			err := r.playQuestion(round)
 			if err != nil {
 				break
 			}
-				<-r.advanceGame
+			r.advanceGame = make(chan bool)
+			<-r.advanceGame
+			r.advanceGame = nil
 		}
 		r.notifyPlayers(
 			func(player Player) {
 				player.NotifyGameEnded("finished", r.points)
 			},
 		)
-		r.advanceGame = nil
 		r.points = nil
 		r.finished = true
 	}()
