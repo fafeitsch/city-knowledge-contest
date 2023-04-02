@@ -5,6 +5,7 @@ import Button from '../../components/Button.svelte';
 import store from '../../store';
 import { type RoomConfiguration, updateRoomConfiguration } from '../../rpc';
 import CopyIcon from './CopyIcon.svelte';
+import Players from '../../components/Players.svelte';
 
 let room = store.get.room$;
 let streetList: string | undefined = undefined;
@@ -14,6 +15,7 @@ let errors = gameConfiguration$.pipe(
   startWith(['noConfiguration']),
   map((errors) => errors.length > 0),
 );
+let players = store.get.players$;
 
 function updateStreetList(event: CustomEvent) {
   streetList = event.detail;
@@ -28,6 +30,8 @@ async function startGame() {
   await store.methods.startGame();
 }
 </script>
+
+<Players players="{$players}" />
 
 <div class="d-flex flex-column align-items-center gap-5">
   <div class="old-font fs-large">Gleich geht das Spiel los …</div>

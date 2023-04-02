@@ -2,9 +2,9 @@
 import L, { Icon, latLng, type LatLng, type Map, Marker } from 'leaflet';
 import { filter } from 'rxjs';
 import { onMount } from 'svelte';
-import { environment } from '../environment';
-import store from '../store';
-import img from '../assets/images/pin.png';
+import { environment } from '../../environment';
+import store from '../../store';
+import img from '../../assets/images/pin.png';
 
 let mapContainer: Map;
 

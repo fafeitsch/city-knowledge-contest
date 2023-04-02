@@ -1,5 +1,5 @@
 <style lang="scss">
-@import '../styles/variables';
+@import '../../styles/variables';
 
 .overlay {
   z-index: 10000;
@@ -30,14 +30,16 @@
 </style>
 
 <script lang="ts">
-import store from '../store';
-import Button from '../components/Button.svelte';
-import Leaflet from '../components/Leaflet.svelte';
-import PartyConfetti from '../components/PartyConfetti.svelte';
+import store from '../../store';
+import PartyConfetti from '../../components/PartyConfetti.svelte';
+import Button from '../../components/Button.svelte';
+import Leaflet from './Leaflet.svelte';
+import Players from '../../components/Players.svelte';
 
 let countdownValue = store.get.countdownValue$;
 let question = store.get.question$;
 let lastResult = store.get.lastResult$;
+let players = store.get.players$;
 
 async function advanceGame() {
   await store.methods.advanceGame();
@@ -45,6 +47,7 @@ async function advanceGame() {
 </script>
 
 <div>
+  <Players players="{$players}" />
   {#if $countdownValue}
     <div class="overlay">{$countdownValue}</div>
   {/if}

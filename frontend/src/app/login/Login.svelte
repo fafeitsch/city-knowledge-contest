@@ -1,8 +1,8 @@
 <script lang="ts">
-import Button from '../components/Button.svelte';
-import Input from '../components/Input.svelte';
-import store from '../store';
 import { onMount } from 'svelte';
+import store from '../../store';
+import Input from '../../components/Input.svelte';
+import Button from '../../components/Button.svelte';
 
 let roomKey = '';
 let userName = '';
