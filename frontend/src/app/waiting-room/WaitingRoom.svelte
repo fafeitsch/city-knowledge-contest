@@ -31,7 +31,7 @@ async function startGame() {
 }
 </script>
 
-<Players players="{$players}" />
+<Players players="{$players}" absolutePosition="true" />
 
 <div class="d-flex flex-column align-items-center gap-5">
   <div class="old-font fs-large">Gleich geht das Spiel los …</div>

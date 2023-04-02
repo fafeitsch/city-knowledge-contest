@@ -47,7 +47,7 @@ async function advanceGame() {
 </script>
 
 <div>
-  <Players players="{$players}" />
+  <Players players="{$players}" absolutePosition="true" />
   {#if $countdownValue}
     <div class="overlay">{$countdownValue}</div>
   {/if}

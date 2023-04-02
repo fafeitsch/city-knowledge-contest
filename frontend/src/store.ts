@@ -152,6 +152,7 @@ const store = {
       state$.next({
         ...state$.value,
         gameResult,
+        lastResult: state$.value.lastResult || 0,
       });
     },
     resetGame() {

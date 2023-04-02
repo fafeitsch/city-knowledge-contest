@@ -19,14 +19,10 @@ import { filter } from 'rxjs';
 import { environment } from './environment';
 import Login from './app/login/Login.svelte';
 import WaitingRoom from './app/waiting-room/WaitingRoom.svelte';
-import Button from './components/Button.svelte';
 import Map from './app/map/Map.svelte';
+import EndScreen from './app/end-screen/EndScreen.svelte';
 
 let gameState = store.get.gameState$;
-
-function newGame() {
-  store.set.resetGame();
-}
 
 function initWebSocket() {
   store.get.room$.pipe(filter((room) => !!room)).subscribe((room) => {
@@ -67,10 +63,7 @@ initWebSocket();
     {:else if $gameState === 'Waiting'}
       <WaitingRoom />
     {:else if $gameState === 'GameEnded'}
-      <div class="d-flex flex-column justify-content-center gap-3 align-items-center">
-        <div class="old-font fs-x-large">Das Spiel ist leider vorbei 🤷</div>
-        <Button title="Neues Spiel" on:click="{() => newGame()}" />
-      </div>
+      <EndScreen />
     {:else}
       <Map />
     {/if}
