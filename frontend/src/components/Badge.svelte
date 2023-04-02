@@ -5,7 +5,6 @@
   padding: 8px;
   background-color: $brown-darker;
   color: $beige;
-  border-radius: 4px;
   font-size: 12px;
   font-weight: 600;
   border-radius: 8px;

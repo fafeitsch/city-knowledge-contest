@@ -1,5 +1,6 @@
 import { environment } from './environment';
-import { defer, map, Observable, switchMap } from 'rxjs';
+import { catchError, defer, map, Observable, of, switchMap, take } from 'rxjs';
+import store from './store';
 
 export function doRpc<ResponseType>(method: string, params: any): Observable<ResponseType> {
   return defer(() =>
@@ -37,4 +38,27 @@ export async function handleRPCRequest<ResponseType>(method: string, params: any
       }
       return response.result;
     });
+}
+
+export type RoomConfiguration = {
+  listFileName: string;
+};
+
+export function updateRoomConfiguration(configuration: RoomConfiguration): Observable<string[]> {
+  return store.get.room$.pipe(
+    take(1),
+    switchMap((authData) =>
+      doRpc<{ errors: string[] }>('updateRoom', {
+        ...authData,
+        ...configuration,
+        maxAnswerTimeSec: 30,
+        numberOfQuestions: 2,
+      }),
+    ),
+    map((result) => result.errors),
+    catchError((err) => {
+      console.error(err);
+      return of(['noConnection']);
+    }),
+  );
 }

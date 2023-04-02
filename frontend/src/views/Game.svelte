@@ -4,7 +4,7 @@ import store from '../store';
 import DefaultLayout from './DefaultLayout.svelte';
 import Map from './Map.svelte';
 import Players from './Players.svelte';
-import WaitingRoom from './WaitingRoom.svelte';
+import WaitingRoom from '../app/waiting-room/WaitingRoom.svelte';
 
 let gameState = store.get.gameState$;
 let players = store.get.players$;

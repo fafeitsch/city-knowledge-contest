@@ -1,5 +1,5 @@
-import { BehaviorSubject, catchError, distinctUntilChanged, filter, map, of, switchMap, withLatestFrom } from 'rxjs';
-import { doRpc, handleRPCRequest } from './rpc';
+import { BehaviorSubject, distinctUntilChanged, map } from 'rxjs';
+import { handleRPCRequest } from './rpc';
 
 export type GameState = 'SetupMap' | 'Waiting' | 'Question' | 'Finished' | 'GameEnded';
 
@@ -32,15 +32,7 @@ interface State {
   question: string;
   room: Game | undefined;
   gameResult: GameResult | undefined;
-  gameConfiguration: GameConfiguration | undefined;
   lastResult: number | undefined;
-  gameErrors: string[];
-}
-
-export interface GameConfiguration {
-  listFileName: string;
-  numberOfQuestions: number;
-  maxAnswerTimeSec: number;
 }
 
 const state: State = {
@@ -50,8 +42,6 @@ const state: State = {
   room: undefined,
   gameResult: undefined,
   lastResult: undefined,
-  gameConfiguration: undefined,
-  gameErrors: ['notInitialized'],
 };
 
 const state$ = new BehaviorSubject<State>(state);
@@ -105,14 +95,6 @@ const store = {
     ),
     lastResult$: state$.pipe(
       map((state) => state.lastResult),
-      distinctUntilChanged(),
-    ),
-    gameConfiguration$: state$.pipe(
-      map((state) => state.gameConfiguration),
-      distinctUntilChanged(),
-    ),
-    errors$: state$.pipe(
-      map((state) => state.gameErrors),
       distinctUntilChanged(),
     ),
   },
@@ -177,21 +159,6 @@ const store = {
         ...state,
       });
     },
-    streetList(fileName: string) {
-      state$.next({
-        ...state$.value,
-        gameConfiguration: {
-          ...state$.value.gameConfiguration,
-          listFileName: fileName,
-        },
-      });
-    },
-    gameErrors(errors: string[]) {
-      state$.next({
-        ...state$.value,
-        gameErrors: errors,
-      });
-    },
   },
   methods: {
     async startGame() {
@@ -233,25 +200,3 @@ const store = {
 };
 
 export default store;
-
-store.get.gameConfiguration$
-  .pipe(
-    filter((config) => !!config),
-    withLatestFrom(store.get.room$.pipe(filter((authData) => !!authData))),
-    switchMap(([config, authData]) =>
-      doRpc<{ errors: string[] }>('updateRoom', {
-        ...authData,
-        ...config,
-        maxAnswerTimeSec: 30,
-        numberOfQuestions: 2,
-      }),
-    ),
-    map((result) => result.errors),
-    catchError((err) => {
-      console.error(err);
-      return of(['noConnection']);
-    }),
-  )
-  .subscribe(async (result) => {
-    store.set.gameErrors(result);
-  });
