@@ -3,7 +3,7 @@ import { map, startWith, Subject, switchMap } from 'rxjs';
 import AvailableStreetLists from './AvailableStreetLists.svelte';
 import Button from '../../components/Button.svelte';
 import store from '../../store';
-import { type RoomConfiguration, updateRoomConfiguration } from '../../rpc';
+import rpc, { type RoomConfiguration } from '../../rpc';
 import CopyIcon from './CopyIcon.svelte';
 import Players from '../../components/Players.svelte';
 
@@ -11,7 +11,7 @@ let room = store.get.room$;
 let streetList: string | undefined = undefined;
 let gameConfiguration$ = new Subject<RoomConfiguration>();
 let errors = gameConfiguration$.pipe(
-  switchMap((config) => updateRoomConfiguration(config)),
+  switchMap((config) => rpc.updateRoomConfiguration(config)),
   startWith(['noConfiguration']),
   map((errors) => errors.length > 0),
 );
@@ -26,8 +26,8 @@ function configureGame() {
   gameConfiguration$.next({ listFileName: streetList });
 }
 
-async function startGame() {
-  await store.methods.startGame();
+function startGame() {
+  rpc.startGame().subscribe();
 }
 </script>
 

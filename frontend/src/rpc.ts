@@ -1,8 +1,8 @@
 import { environment } from './environment';
-import { catchError, defer, map, Observable, of, switchMap, take } from 'rxjs';
+import { catchError, defer, EMPTY, map, Observable, of, switchMap, take } from 'rxjs';
 import store from './store';
 
-export function doRpc<ResponseType>(method: string, params: any): Observable<ResponseType> {
+function doRpc<ResponseType>(method: string, params: any): Observable<ResponseType> {
   return defer(() =>
     fetch(environment[import.meta.env.MODE].apiUrl, {
       method: 'POST',
@@ -23,59 +23,102 @@ export function doRpc<ResponseType>(method: string, params: any): Observable<Res
   );
 }
 
-export async function handleRPCRequest<ResponseType>(method: string, params: any) {
-  return fetch(environment[import.meta.env.MODE].apiUrl, {
-    method: 'POST',
-    body: JSON.stringify({
-      method,
-      params,
-    }),
-  })
-    .then((response) => response.json())
-    .then((response) => {
-      if (response.error) {
-        throw new Error(response.error.message);
-      }
-      return response.result;
+const rpc = {
+  updateRoomConfiguration(configuration: RoomConfiguration): Observable<string[]> {
+    return store.get.room$.pipe(
+      take(1),
+      switchMap((authData) =>
+        doRpc<{ errors: string[] }>('updateRoom', {
+          ...authData,
+          ...configuration,
+          maxAnswerTimeSec: 30,
+          numberOfQuestions: 2,
+        }),
+      ),
+      map((result) => result.errors),
+      catchError((err) => {
+        console.error(err);
+        return of(['noConnection']);
+      }),
+    );
+  },
+  answerQuestion(guess: [number, number]): Observable<number> {
+    return store.get.room$.pipe(
+      take(1),
+      switchMap((authData) =>
+        doRpc<{ points: number }>('answerQuestion', {
+          ...authData,
+          guess,
+        }),
+      ),
+      map((result) => result.points),
+      catchError((err) => {
+        console.error(err);
+        return of(0);
+      }),
+    );
+  },
+  advanceRoom(): Observable<void> {
+    return store.get.room$.pipe(
+      take(1),
+      switchMap((authData) =>
+        doRpc<void>('advanceGame', {
+          ...authData,
+        }),
+      ),
+      catchError((err) => {
+        console.error(err);
+        return EMPTY;
+      }),
+    );
+  },
+  startGame(): Observable<void> {
+    return store.get.room$.pipe(
+      take(1),
+      switchMap((authData) =>
+        doRpc<void>('startGame', {
+          ...authData,
+        }),
+      ),
+      catchError((err) => {
+        console.error(err);
+        return EMPTY;
+      }),
+    );
+  },
+  createRoom(username: string): Observable<Room> {
+    return doRpc<Room>('createRoom', {
+      name: username,
     });
-}
+  },
+  joinRoom(roomKey: string, username: string): Observable<Room> {
+    return doRpc<{
+      playerKey: string;
+      playerSecret: string;
+    }>('joinRoom', {
+      roomKey,
+      name: username,
+    }).pipe(map((data) => ({ ...data, roomKey })));
+  },
+  getStreetLists(): Observable<StreetList[]> {
+    return doRpc<StreetList[]>('getAvailableStreetLists', {});
+  },
+};
+
+export default rpc;
 
 export type RoomConfiguration = {
   listFileName: string;
 };
 
-export function updateRoomConfiguration(configuration: RoomConfiguration): Observable<string[]> {
-  return store.get.room$.pipe(
-    take(1),
-    switchMap((authData) =>
-      doRpc<{ errors: string[] }>('updateRoom', {
-        ...authData,
-        ...configuration,
-        maxAnswerTimeSec: 30,
-        numberOfQuestions: 2,
-      }),
-    ),
-    map((result) => result.errors),
-    catchError((err) => {
-      console.error(err);
-      return of(['noConnection']);
-    }),
-  );
-}
+export type Room = {
+  playerKey: string;
+  playerSecret: string;
+  roomKey: string;
+};
 
-export function answerQuestion(guess: [number, number]): Observable<number> {
-  return store.get.room$.pipe(
-    take(1),
-    switchMap((authData) =>
-      doRpc<{ points: number }>('answerQuestion', {
-        ...authData,
-        guess,
-      }),
-    ),
-    map((result) => result.points),
-    catchError((err) => {
-      console.error(err);
-      return of(0);
-    }),
-  );
-}
+type StreetList = {
+  FileName: string;
+  name: string;
+  center: { Lat: number; Lng: number };
+};

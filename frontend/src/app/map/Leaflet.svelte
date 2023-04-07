@@ -1,10 +1,11 @@
 <script lang="ts">
 import L, { Icon, latLng, type LatLng, type Map, Marker } from 'leaflet';
-import { filter } from 'rxjs';
+import { filter, map } from 'rxjs';
 import { createEventDispatcher, onMount } from 'svelte';
 import { environment } from '../../environment';
 import store from '../../store';
 import img from '../../assets/images/pin.png';
+import { subscribeToQuestionFinished, subscribeToSocketTopic, Topic } from '../../sockets';
 
 let mapContainer: Map;
 
@@ -20,29 +21,31 @@ let dispatch = createEventDispatcher();
 
 onMount(() => {
   mapContainer = createMap();
-  store.get.gameResult$.pipe(filter((result) => !!result)).subscribe((value) => {
-    if (marker !== undefined) {
-      marker.removeFrom(mapContainer);
-    }
-    marker = new Marker(
-      {
-        lat: value.solution[0],
-        lng: value.solution[1],
-      },
-      { icon: markerIcon },
-    );
-    mapContainer
-      .flyTo(
+  subscribeToQuestionFinished()
+    .pipe(filter((result) => !!result))
+    .subscribe((value) => {
+      if (marker !== undefined) {
+        marker.removeFrom(mapContainer);
+      }
+      marker = new Marker(
         {
           lat: value.solution[0],
           lng: value.solution[1],
         },
-        18,
-      )
-      .on('moveend', () => {
-        marker.addTo(mapContainer);
-      });
-  });
+        { icon: markerIcon },
+      );
+      mapContainer
+        .flyTo(
+          {
+            lat: value.solution[0],
+            lng: value.solution[1],
+          },
+          18,
+        )
+        .on('moveend', () => {
+          marker.addTo(mapContainer);
+        });
+    });
   return {
     destroy: () => {
       mapContainer.remove();

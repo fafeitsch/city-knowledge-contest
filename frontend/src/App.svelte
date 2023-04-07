@@ -14,47 +14,32 @@
 </style>
 
 <script lang="ts">
-import store from './store';
-import { filter } from 'rxjs';
-import { environment } from './environment';
+import { map, merge, tap } from 'rxjs';
 import Login from './app/login/Login.svelte';
 import WaitingRoom from './app/waiting-room/WaitingRoom.svelte';
 import Map from './app/map/Map.svelte';
 import EndScreen from './app/end-screen/EndScreen.svelte';
+import {
+  initWebSocket,
+  subscribeToCountdown,
+  subscribeToGameEnded,
+  subscribeToQuestion,
+  subscribeToSocketTopic,
+  Topic,
+} from './sockets';
 
-let gameState = store.get.gameState$;
-
-function initWebSocket() {
-  store.get.room$.pipe(filter((room) => !!room)).subscribe((room) => {
-    const websocket = new WebSocket(environment[import.meta.env.MODE].wsUrl + room.roomKey + '/' + room.playerKey);
-    websocket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.topic === 'successfullyJoined') {
-        console.log(data.payload.players);
-        store.set.players(data.payload.players);
-      } else if (data.topic === 'playerJoined') {
-        store.set.addPlayer(data.payload);
-      } else if (data.topic === 'questionCountdown') {
-        store.set.countdownValue(data.payload.followUps + 1);
-      } else if (data.topic === 'question') {
-        store.set.countdownValue(undefined);
-        store.set.question(data.payload.find);
-      } else if (data.topic === 'questionFinished') {
-        store.set.gameResult(data.payload);
-        store.set.updatePlayerRanking(data.payload);
-      } else if (data.topic === 'gameEnded') {
-        store.set.game(undefined);
-      }
-    };
-  });
-}
-
+let gameState = merge(
+  subscribeToSocketTopic(Topic.successfullyJoined).pipe(map((data) => (data ? 'Waiting' : undefined))),
+  subscribeToCountdown().pipe(map((data) => (data ? 'Question' : undefined))),
+  subscribeToQuestion().pipe(map((data) => (data ? 'Question' : undefined))),
+  subscribeToGameEnded().pipe(map((data) => (data ? 'GameEnded' : undefined))),
+).pipe(tap((x) => console.log(x)));
 initWebSocket();
 </script>
 
 <div class="page-container">
   <div class="content-container">
-    {#if $gameState === 'SetupMap'}
+    {#if $gameState === undefined}
       <div class="d-flex flex-column gap-4 align-items-center">
         <h1 class="old-font">City Knowledge Contest</h1>
         <p class="mb-5 fs-large">Wer findet die gesuchten Orte am schnellsten?</p>

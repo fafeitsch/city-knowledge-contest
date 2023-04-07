@@ -1,18 +1,12 @@
 <script lang="ts">
-import { startWith } from 'rxjs';
 import { createEventDispatcher } from 'svelte';
 import Button from '../../components/Button.svelte';
-import { doRpc } from '../../rpc';
-
-type StreetList = {
-  FileName: string;
-  name: string;
-  center: { Lat: number; Lng: number };
-};
+import rpc from '../../rpc';
+import { startWith } from 'rxjs';
 
 let dispatch = createEventDispatcher();
 
-let streetLists = doRpc<StreetList[]>('getAvailableStreetLists', {}).pipe(startWith([]));
+let streetLists = rpc.getStreetLists().pipe(startWith([]));
 
 function updateStreetList(streetList: string) {
   dispatch('streetListChanged', streetList);

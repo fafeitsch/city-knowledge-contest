@@ -3,6 +3,7 @@ import { onMount } from 'svelte';
 import store from '../../store';
 import Input from '../../components/Input.svelte';
 import Button from '../../components/Button.svelte';
+import rpc from '../../rpc';
 
 let roomKey = '';
 let userName = '';
@@ -22,12 +23,12 @@ function handleRoomIdChange(event: CustomEvent<string>) {
   roomKey = event.detail;
 }
 
-async function createRoom() {
-  await store.methods.createRoom(userName);
+function createRoom() {
+  rpc.createRoom(userName).subscribe((data) => store.set.game(data));
 }
 
 async function joinRoom() {
-  await store.methods.joinRoom(roomKey, userName);
+  rpc.joinRoom(roomKey, userName).subscribe((data) => store.set.game(data));
 }
 </script>
 

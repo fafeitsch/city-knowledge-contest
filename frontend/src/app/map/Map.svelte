@@ -35,26 +35,41 @@ import PartyConfetti from '../../components/PartyConfetti.svelte';
 import Button from '../../components/Button.svelte';
 import Leaflet from './Leaflet.svelte';
 import Players from '../../components/Players.svelte';
-import { of, Subject, switchMap } from 'rxjs';
-import { answerQuestion } from '../../rpc';
+import { map, merge, of, Subject, switchMap, tap } from 'rxjs';
+import {
+  subscribeToCountdown,
+  subscribeToQuestion,
+  subscribeToQuestionFinished,
+  subscribeToSocketTopic,
+  Topic,
+} from '../../sockets';
+import rpc from '../../rpc';
 
-let countdownValue = store.get.countdownValue$;
-let question = store.get.question$;
+let countdown = merge(
+  subscribeToQuestion().pipe(map(() => undefined)),
+  subscribeToCountdown().pipe(map((data) => (data ? data.followUps + 1 : undefined))),
+);
+let question = merge(countdown.pipe(map(() => undefined)), subscribeToQuestion().pipe(map((data) => data?.find)));
+let gameFinished = merge(
+  countdown.pipe(map(() => undefined)),
+  question.pipe(map(() => undefined)),
+  subscribeToQuestionFinished().pipe(map((data) => (data ? 'questionFinished' : undefined))),
+);
+
 let guess = new Subject<[number, number] | undefined>();
 let lastResult = guess.pipe(
   switchMap((guess) => {
     if (!guess) {
       return of(undefined);
     }
-    return answerQuestion(guess);
+    return rpc.answerQuestion(guess);
   }),
 );
 let players = store.get.players$;
-let gameState = store.get.gameState$;
 
-async function advanceGame() {
+function advanceGame() {
   guess.next(undefined);
-  await store.methods.advanceGame();
+  rpc.advanceRoom().subscribe();
 }
 
 function onAnswerQuestion(event: CustomEvent) {
@@ -64,8 +79,8 @@ function onAnswerQuestion(event: CustomEvent) {
 
 <div>
   <Players players="{$players}" absolutePosition="true" />
-  {#if $countdownValue}
-    <div class="overlay">{$countdownValue}</div>
+  {#if $countdown}
+    <div class="overlay">{$countdown}</div>
   {/if}
   <Leaflet on:answerQuestion="{onAnswerQuestion}" />
   {#if $question && $lastResult === undefined}
@@ -81,7 +96,7 @@ function onAnswerQuestion(event: CustomEvent) {
         {:else}
           <div>Leider falsch 🤷</div>
         {/if}
-        {#if $gameState === 'Finished'}
+        {#if $gameFinished}
           <Button on:click="{() => advanceGame()}" title="Weiter" />
         {/if}
       </div>
