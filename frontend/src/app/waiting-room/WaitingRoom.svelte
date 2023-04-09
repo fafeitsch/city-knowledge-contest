@@ -10,8 +10,10 @@ import CoverImage from '../../components/CoverImage.svelte';
 import Card from '../../components/Card.svelte';
 import Input from '../../components/Input.svelte';
 
-let room = store.get.room$;
+const decimalRegex = /^\d+$/;
 let streetList: string | undefined = undefined;
+let numberOfQuestions = 10;
+let maxAnswerTimeSec = 30;
 let gameConfiguration$ = new Subject<RoomConfiguration>();
 let errors = gameConfiguration$.pipe(
   switchMap((config) => rpc.updateRoomConfiguration(config)),
@@ -25,8 +27,35 @@ function updateStreetList(event: CustomEvent) {
   configureGame();
 }
 
+function updateNumberOfQuestions(event: CustomEvent) {
+  let text = event.detail;
+  if (!decimalRegex.test(text)) {
+    return;
+  }
+  numberOfQuestions = parseInt(text, 10);
+  if (!Number.isInteger(numberOfQuestions)) {
+    return;
+  }
+  configureGame();
+}
+
+function updateMaxAnswerTimeSec(event: CustomEvent) {
+  let text = event.detail;
+  if (!decimalRegex.test(text)) {
+    return;
+  }
+  maxAnswerTimeSec = parseInt(text, 10);
+  if (!Number.isInteger(maxAnswerTimeSec)) {
+    return;
+  }
+  configureGame();
+}
+
 function configureGame() {
-  gameConfiguration$.next({ listFileName: streetList });
+  if (!streetList) {
+    return;
+  }
+  gameConfiguration$.next({ listFileName: streetList, numberOfQuestions, maxAnswerTimeSec });
 }
 
 function startGame() {
@@ -55,8 +84,18 @@ function startGame() {
   <Card>
     <AvailableStreetLists on:streetListChanged="{updateStreetList}" />
     <div class="d-flex gap-4">
-      <Input placeholder="Anzahl der Fragen" />
-      <Input placeholder="Zeit" />
+      <Input
+        placeholder="Anzahl der Fragen"
+        on:input="{updateNumberOfQuestions}"
+        value="{numberOfQuestions}"
+        type="number"
+      />
+      <Input
+        placeholder="Sekunden pro Frage"
+        on:input="{updateMaxAnswerTimeSec}"
+        value="{maxAnswerTimeSec}"
+        type="number"
+      />
     </div>
     <Button title="Spiel starten" on:click="{startGame}" disabled="{$errors}" />
   </Card>

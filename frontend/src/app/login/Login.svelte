@@ -56,7 +56,7 @@ function createRoom() {
 }
 
 async function joinRoom() {
-  joinTrigger.next();
+  joinTrigger.next(undefined);
 }
 </script>
 

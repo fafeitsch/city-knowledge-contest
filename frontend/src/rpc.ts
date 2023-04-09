@@ -1,5 +1,5 @@
 import { environment } from './environment';
-import { catchError, defer, EMPTY, map, Observable, of, switchMap, take } from 'rxjs';
+import { catchError, defer, EMPTY, map, Observable, of, switchMap, take, tap } from 'rxjs';
 import store from './store';
 
 function doRpc<ResponseType>(method: string, params: any): Observable<ResponseType> {
@@ -27,12 +27,11 @@ const rpc = {
   updateRoomConfiguration(configuration: RoomConfiguration): Observable<string[]> {
     return store.get.room$.pipe(
       take(1),
+      tap((x) => console.log(x)),
       switchMap((authData) =>
         doRpc<{ errors: string[] }>('updateRoom', {
           ...authData,
           ...configuration,
-          maxAnswerTimeSec: 30,
-          numberOfQuestions: 2,
         }),
       ),
       map((result) => result.errors),
@@ -109,6 +108,8 @@ export default rpc;
 
 export type RoomConfiguration = {
   listFileName: string;
+  numberOfQuestions: number;
+  maxAnswerTimeSec: number;
 };
 
 export type Room = {

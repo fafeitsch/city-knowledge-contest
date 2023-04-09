@@ -60,10 +60,15 @@ function dispatchInputEvent(event) {
 
 export let placeholder: string;
 export let value: string = '';
+export let type = 'text';
 </script>
 
 <div class="input-container" data-value="{value}">
-  <input on:change on:input="{dispatchInputEvent}" autocomplete="off" bind:value="{value}" />
+  {#if type === 'text'}
+    <input on:change on:input="{dispatchInputEvent}" autocomplete="off" bind:value="{value}" />
+  {:else if type === 'number'}
+    <input on:change on:input="{dispatchInputEvent}" autocomplete="off" bind:value="{value}" type="number" />
+  {/if}
   <label class="label">
     <div class="placeholder">{placeholder}</div>
   </label>

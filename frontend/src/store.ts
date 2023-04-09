@@ -64,7 +64,7 @@ const store = {
     game(game: Game) {
       state$.next({
         ...state$.value,
-        room: game,
+        room: { roomKey: game.roomKey, playerKey: game.playerKey, playerSecret: game.playerSecret },
       });
     },
     resetGame() {
