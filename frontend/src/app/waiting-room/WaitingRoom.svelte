@@ -9,11 +9,14 @@ import Players from '../../components/Players.svelte';
 import CoverImage from '../../components/CoverImage.svelte';
 import Card from '../../components/Card.svelte';
 import Input from '../../components/Input.svelte';
+import { get } from 'svelte/store';
+import App from '../../App.svelte';
 
 const decimalRegex = /^\d+$/;
 let streetList: string | undefined = undefined;
 let numberOfQuestions = 10;
 let maxAnswerTimeSec = 30;
+let room = store.get.room$;
 let gameConfiguration$ = new Subject<RoomConfiguration>();
 let errors = gameConfiguration$.pipe(
   switchMap((config) => rpc.updateRoomConfiguration(config)),
@@ -63,7 +66,7 @@ function startGame() {
 }
 </script>
 
-<Players players="{$players}" absolutePosition="{true}" />
+<Players playerKey="{$room.playerKey}" players="{$players}" absolutePosition="{true}" />
 
 <CoverImage>
   <h1>Gleich geht's los…</h1>
@@ -87,13 +90,13 @@ function startGame() {
       <Input
         placeholder="Anzahl der Fragen"
         on:input="{updateNumberOfQuestions}"
-        value="{numberOfQuestions}"
+        value="{numberOfQuestions.toString()}"
         type="number"
       />
       <Input
         placeholder="Sekunden pro Frage"
         on:input="{updateMaxAnswerTimeSec}"
-        value="{maxAnswerTimeSec}"
+        value="{maxAnswerTimeSec.toString()}"
         type="number"
       />
     </div>

@@ -3,8 +3,8 @@
 
 .badge {
   padding: 8px;
-  background-color: $brown-darker;
-  color: $beige;
+  background-color: $blue-dark;
+  color: white;
   font-size: 12px;
   font-weight: 600;
   border-radius: 8px;
