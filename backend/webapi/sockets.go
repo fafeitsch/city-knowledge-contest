@@ -83,9 +83,10 @@ type playerInfo struct {
 }
 
 type roomUpdateMessage struct {
-	ListName          string     `json:"listName"`
+	ListFileName      string     `json:"listFileName"`
 	Center            [2]float64 `json:"center"`
 	NumberOfQuestions int        `json:"numberOfQuestions"`
+	MaxAnswerTimeSec  int        `json:"maxAnswerTimeSec"`
 	PlayerKey         string     `json:"playerKey,omitempty"`
 	Errors            []string   `json:"errors"`
 }
@@ -158,15 +159,16 @@ func (w *websocketNotifier) NotifyPlayerAnswered(playerKey string) {
 func convertRoomOptions(options contest.RoomOptions, playerKey string) roomUpdateMessage {
 	listName := ""
 	if options.StreetList != nil {
-		listName = options.StreetList.Name
+		listName = options.StreetList.FileName
 	}
 	center := [2]float64{0, 0}
 	if options.StreetList != nil {
 		center = [2]float64{options.StreetList.Center.Lat, options.StreetList.Center.Lng}
 	}
 	message := roomUpdateMessage{
-		ListName:          listName,
+		ListFileName:      listName,
 		Center:            center,
+		MaxAnswerTimeSec:  int(options.MaxAnswerTime / time.Second),
 		NumberOfQuestions: options.NumberOfQuestions,
 		PlayerKey:         playerKey,
 		Errors:            options.Errors(),

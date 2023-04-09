@@ -112,6 +112,8 @@ export type RoomConfiguration = {
   maxAnswerTimeSec: number;
 };
 
+export type RoomConfigurationResult = RoomConfiguration & { errors: string[] };
+
 export type Room = {
   playerKey: string;
   playerSecret: string;

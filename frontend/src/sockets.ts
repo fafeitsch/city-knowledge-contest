@@ -1,6 +1,7 @@
 import store from './store';
 import { BehaviorSubject, filter, Observable } from 'rxjs';
 import { environment } from './environment';
+import type { RoomConfigurationResult } from './rpc';
 
 export enum Topic {
   'roomUpdated' = 'roomUpdated',
@@ -46,6 +47,14 @@ export function subscribeToQuestion(): Observable<{ find: string }> {
 
 export function subscribeToCountdown(): Observable<{ followUps: number }> {
   return subscribeToSocketTopic<{ followUps: number }>(Topic.questionCountdown);
+}
+
+export function subscribeToJoined(): Observable<{ options: RoomConfigurationResult }> {
+  return subscribeToSocketTopic<{ options: RoomConfigurationResult }>(Topic.successfullyJoined);
+}
+
+export function subscribeToRoomUpdated(): Observable<RoomConfigurationResult> {
+  return subscribeToSocketTopic<RoomConfigurationResult>(Topic.roomUpdated);
 }
 
 export type GameResult = {

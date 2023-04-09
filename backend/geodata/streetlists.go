@@ -65,7 +65,7 @@ func ReadStreetList(fileName string) (*StreetList, error) {
 	if err != nil {
 		return streetList, fmt.Errorf("could not parse file \"%s\" as streetListFile", fileName)
 	}
-	streetList.fileName = fileName
+	streetList.FileName = fileName
 	if len(streetList.Streets) == 0 {
 		return streetList, fmt.Errorf("file \"%s\" does not contain any streets", fileName)
 	}
@@ -75,7 +75,7 @@ func ReadStreetList(fileName string) (*StreetList, error) {
 
 type StreetList struct {
 	mutex    sync.Mutex
-	fileName string
+	FileName string
 	Country  string           `json:"country"`
 	City     string           `json:"city"`
 	Name     string           `json:"name"`

@@ -22,21 +22,16 @@ import { createEventDispatcher } from 'svelte';
 import rpc from '../../rpc';
 import { startWith } from 'rxjs';
 
+export let selectedStreetList = '';
 let dispatch = createEventDispatcher();
 let streetLists = rpc.getStreetLists().pipe(startWith([]));
-let selectedStreetList = '';
 
-function updateStreetList(streetList: string) {
-  dispatch('streetListChanged', streetList);
+function updateStreetList(event: any) {
+  dispatch('streetListChanged', event.target.value);
 }
 </script>
 
-<select
-  placeholder="Strassenkarte auswählen"
-  class="select"
-  bind:value="{selectedStreetList}"
-  on:change="{() => updateStreetList(selectedStreetList)}"
->
+<select class="select" value="{selectedStreetList}" on:change="{updateStreetList}">
   {#each $streetLists as streetList}
     <option class="placeholder" value="" disabled selected hidden>Straßenkarte auswählen</option>
     <option value="{streetList.FileName}">{streetList.name}</option>

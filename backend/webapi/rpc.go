@@ -89,9 +89,12 @@ func (r *roomContainer) updateRoom(message json.RawMessage) (*rpcRequestContext,
 	return &rpcRequestContext{
 		process: func() (any, error) {
 			request.ListFileName = filepath.Base(request.ListFileName)
-			streetList, err := geodata.ReadStreetList(request.ListFileName)
-			if err != nil {
-				return updateRoomResponse{}, fmt.Errorf("could not load street list: %s", err)
+			var streetList *geodata.StreetList
+			if request.ListFileName != "." {
+				streetList, err = geodata.ReadStreetList(request.ListFileName)
+				if err != nil {
+					return updateRoomResponse{}, fmt.Errorf("could not load street list: %s", err)
+				}
 			}
 			room.SetOptions(
 				contest.RoomOptions{

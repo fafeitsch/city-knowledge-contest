@@ -1,64 +1,61 @@
 <script lang="ts">
-import { map, startWith, Subject, switchMap } from 'rxjs';
+import { filter, map, merge, Observable, startWith, Subject, switchMap, tap } from 'rxjs';
 import AvailableStreetLists from './AvailableStreetLists.svelte';
 import Button from '../../components/Button.svelte';
 import store from '../../store';
-import rpc, { type RoomConfiguration } from '../../rpc';
+import rpc, { type RoomConfiguration, type RoomConfigurationResult } from '../../rpc';
 import CopyIcon from './CopyIcon.svelte';
 import Players from '../../components/Players.svelte';
 import CoverImage from '../../components/CoverImage.svelte';
 import Card from '../../components/Card.svelte';
 import Input from '../../components/Input.svelte';
-import { get } from 'svelte/store';
-import App from '../../App.svelte';
+import { subscribeToJoined, subscribeToRoomUpdated } from '../../sockets';
 
 const decimalRegex = /^\d+$/;
-let streetList: string | undefined = undefined;
-let numberOfQuestions = 10;
-let maxAnswerTimeSec = 30;
 let room = store.get.room$;
-let gameConfiguration$ = new Subject<RoomConfiguration>();
-let errors = gameConfiguration$.pipe(
-  switchMap((config) => rpc.updateRoomConfiguration(config)),
-  startWith(['noConfiguration']),
-  map((errors) => errors.length > 0),
-);
+let remoteConfiguration: Observable<RoomConfigurationResult | undefined> = merge(
+  subscribeToRoomUpdated(),
+  subscribeToJoined().pipe(map((payload) => payload?.options)),
+).pipe(filter((config) => !!config));
 let players = store.get.players$;
 
-function updateStreetList(event: CustomEvent) {
-  streetList = event.detail;
-  configureGame();
+function updateStreetList(event: CustomEvent, config: RoomConfiguration) {
+  const newConfig: RoomConfiguration = {
+    maxAnswerTimeSec: config.maxAnswerTimeSec,
+    listFileName: event.detail,
+    numberOfQuestions: config.numberOfQuestions,
+  };
+  configureGame(newConfig);
 }
 
-function updateNumberOfQuestions(event: CustomEvent) {
+function updateNumberOfQuestions(event: CustomEvent, config: RoomConfiguration) {
   let text = event.detail;
   if (!decimalRegex.test(text)) {
-    return;
+    text = text.replaceAll(/[^0-9]/g, '');
   }
-  numberOfQuestions = parseInt(text, 10);
-  if (!Number.isInteger(numberOfQuestions)) {
-    return;
-  }
-  configureGame();
+  const newConfig: RoomConfiguration = {
+    maxAnswerTimeSec: config.maxAnswerTimeSec,
+    listFileName: config.listFileName,
+    numberOfQuestions: parseInt(text, 10),
+  };
+  configureGame(newConfig);
 }
 
-function updateMaxAnswerTimeSec(event: CustomEvent) {
+function updateMaxAnswerTimeSec(event: CustomEvent, config: RoomConfiguration) {
   let text = event.detail;
   if (!decimalRegex.test(text)) {
-    return;
+    text = text.replaceAll(/[^0-9]/g, '');
   }
-  maxAnswerTimeSec = parseInt(text, 10);
-  if (!Number.isInteger(maxAnswerTimeSec)) {
-    return;
-  }
-  configureGame();
+  const newConfig: RoomConfiguration = {
+    maxAnswerTimeSec: parseInt(text, 10),
+    listFileName: config.listFileName,
+    numberOfQuestions: config.numberOfQuestions,
+  };
+  configureGame(newConfig);
 }
 
-function configureGame() {
-  if (!streetList) {
-    return;
-  }
-  gameConfiguration$.next({ listFileName: streetList, numberOfQuestions, maxAnswerTimeSec });
+function configureGame(config: RoomConfiguration) {
+  rpc.updateRoomConfiguration(config).subscribe();
 }
 
 function startGame() {
@@ -85,21 +82,28 @@ function startGame() {
     </p>
   </Card>
   <Card>
-    <AvailableStreetLists on:streetListChanged="{updateStreetList}" />
+    <AvailableStreetLists
+      on:streetListChanged="{(event) => updateStreetList(event, $remoteConfiguration)}"
+      selectedStreetList="{$remoteConfiguration?.listFileName || ''}"
+    />
     <div class="d-flex gap-4">
       <Input
         placeholder="Anzahl der Fragen"
-        on:input="{updateNumberOfQuestions}"
-        value="{numberOfQuestions.toString()}"
+        on:input="{(event) => updateNumberOfQuestions(event, $remoteConfiguration)}"
+        value="{$remoteConfiguration?.numberOfQuestions || ''}"
         type="number"
       />
       <Input
         placeholder="Sekunden pro Frage"
-        on:input="{updateMaxAnswerTimeSec}"
-        value="{maxAnswerTimeSec.toString()}"
+        on:input="{(event) => updateMaxAnswerTimeSec(event, $remoteConfiguration)}"
+        value="{$remoteConfiguration?.maxAnswerTimeSec || ''}"
         type="number"
       />
     </div>
-    <Button title="Spiel starten" on:click="{startGame}" disabled="{$errors}" />
+    <Button
+      title="Spiel starten"
+      on:click="{startGame}"
+      disabled="{!$remoteConfiguration || $remoteConfiguration.errors.length > 0}"
+    />
   </Card>
 </CoverImage>
