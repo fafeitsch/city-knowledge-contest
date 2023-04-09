@@ -4,24 +4,26 @@
 .input-container {
   position: relative;
   display: flex;
+  width: 100%;
 }
 
 input {
   padding: 16px 8px;
   width: 100%;
-  background-color: $beige;
-  border: 3px solid $old-map-lighter;
+  border: 3px solid $gray-main;
+  border-radius: 8px;
   font-size: large;
   outline: none;
   transition: 500ms;
 
-  &:focus {
-    border: 3px solid $old-map-darker;
+  &:focus,
+  &:hover {
+    border: 3px solid $blue-dark;
   }
 }
 
 .label {
-  color: $brown-darker;
+  color: $gray-dark;
   position: absolute;
   top: 0;
   bottom: 0;

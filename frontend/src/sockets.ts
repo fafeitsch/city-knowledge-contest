@@ -62,8 +62,8 @@ export function subscribeToQuestionFinished(): Observable<GameResult> {
   return subscribeToSocketTopic<GameResult>(Topic.questionFinished);
 }
 
-export function subscribeToGameEnded(): Observable<void> {
-  return subscribeToSocketTopic<void>(Topic.gameEnded);
+export function subscribeToGameEnded(): Observable<unknown> {
+  return subscribeToSocketTopic<unknown>(Topic.gameEnded);
 }
 
 export function subscribeToSocketTopic<T>(topic: Topic): BehaviorSubject<T | undefined> {

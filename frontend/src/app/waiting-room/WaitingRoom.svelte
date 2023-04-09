@@ -6,6 +6,9 @@ import store from '../../store';
 import rpc, { type RoomConfiguration } from '../../rpc';
 import CopyIcon from './CopyIcon.svelte';
 import Players from '../../components/Players.svelte';
+import CoverImage from '../../components/CoverImage.svelte';
+import Card from '../../components/Card.svelte';
+import Input from '../../components/Input.svelte';
 
 let room = store.get.room$;
 let streetList: string | undefined = undefined;
@@ -31,22 +34,30 @@ function startGame() {
 }
 </script>
 
-<Players players="{$players}" absolutePosition="true" />
+<Players players="{$players}" absolutePosition="{true}" />
 
-<div class="d-flex flex-column align-items-center gap-5">
-  <div class="old-font fs-large">Gleich geht das Spiel los …</div>
-  <p class="mt-5">Teile den Code, um andere Personen zu diesem Spiel einzuladen:</p>
-  <p class="fw-bold p-3 bg-old-map-lighter d-flex align-items-center gap-3">
-    {$room.roomKey}
-    <CopyIcon
-      width="{16}"
-      height="{16}"
-      className="color-black"
-      on:click="{() => {
-        navigator.clipboard.writeText($room.roomKey);
-      }}"
-    />
-  </p>
-  <AvailableStreetLists on:streetListChanged="{updateStreetList}" />
-  <Button title="Spiel starten" on:click="{startGame}" disabled="{$errors}" />
-</div>
+<CoverImage>
+  <h1>Gleich geht's los…</h1>
+  <Card>
+    <p>Teile den Link, um andere Personen zu diesem Spiel einzuladen:</p>
+    <p class="fw-bold d-flex align-items-center gap-3">
+      {window.location}
+      <CopyIcon
+        width="{16}"
+        height="{16}"
+        className="color-black"
+        on:click="{() => {
+          navigator.clipboard.writeText(window.location.toString());
+        }}"
+      />
+    </p>
+  </Card>
+  <Card>
+    <AvailableStreetLists on:streetListChanged="{updateStreetList}" />
+    <div class="d-flex gap-4">
+      <Input placeholder="Anzahl der Fragen" />
+      <Input placeholder="Zeit" />
+    </div>
+    <Button title="Spiel starten" on:click="{startGame}" disabled="{$errors}" />
+  </Card>
+</CoverImage>

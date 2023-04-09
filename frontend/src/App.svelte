@@ -14,7 +14,7 @@
 </style>
 
 <script lang="ts">
-import { map, merge, tap } from 'rxjs';
+import { distinctUntilChanged, map, merge } from 'rxjs';
 import Login from './app/login/Login.svelte';
 import WaitingRoom from './app/waiting-room/WaitingRoom.svelte';
 import Map from './app/map/Map.svelte';
@@ -33,18 +33,14 @@ let gameState = merge(
   subscribeToCountdown().pipe(map((data) => (data ? 'Question' : undefined))),
   subscribeToQuestion().pipe(map((data) => (data ? 'Question' : undefined))),
   subscribeToGameEnded().pipe(map((data) => (data ? 'GameEnded' : undefined))),
-).pipe(tap((x) => console.log(x)));
+).pipe(distinctUntilChanged());
 initWebSocket();
 </script>
 
 <div class="page-container">
   <div class="content-container">
     {#if $gameState === undefined}
-      <div class="d-flex flex-column gap-4 align-items-center">
-        <h1 class="old-font">City Knowledge Contest</h1>
-        <p class="mb-5 fs-large">Wer findet die gesuchten Orte am schnellsten?</p>
-        <Login />
-      </div>
+      <Login />
     {:else if $gameState === 'Waiting'}
       <WaitingRoom />
     {:else if $gameState === 'GameEnded'}

@@ -1,11 +1,15 @@
+@import './variables';
+
 h1 {
-    font-size: xx-large;
+    font-size: 58px;
     font-weight: bolder;
+    font-family: 'LilitaOne';
+    color: $blue-dark;
 }
 
 @font-face {
-    font-family: 'MedievalSharp';
-    src: url('./assets/fonts/MedievalSharp-Regular.ttf') format('truetype');
+    font-family: 'LilitaOne';
+    src: url('./assets/fonts/LilitaOne-Regular.ttf') format('truetype');
 }
 
 @font-face {
@@ -14,8 +18,8 @@ h1 {
     font-weight: 400;
 }
 
-.old-font {
-    font-family: 'MedievalSharp';
+.font-lilita-one {
+    font-family: 'LilitaOne';
 }
 
 .fs-xx-large {
