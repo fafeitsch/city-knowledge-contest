@@ -51,7 +51,7 @@ function handleUsernameChange(newName: CustomEvent<string>) {
 function createRoom() {
   rpc.createRoom(userName).subscribe((data) => {
     store.set.game(data);
-    window.history.replaceState(null, '', window.location + data.roomKey);
+    window.history.replaceState(null, '', window.location + 'room/' + data.roomKey);
   });
 }
 

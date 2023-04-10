@@ -1,5 +1,5 @@
 import store from './store';
-import { BehaviorSubject, filter, Observable } from 'rxjs';
+import { BehaviorSubject, filter, Observable, tap } from 'rxjs';
 import { environment } from './environment';
 import type { RoomConfigurationResult } from './rpc';
 

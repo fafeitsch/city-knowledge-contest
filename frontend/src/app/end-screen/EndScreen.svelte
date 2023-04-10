@@ -6,6 +6,7 @@ import Players from '../../components/Players.svelte';
 let players = store.get.players$;
 
 function newGame() {
+  window.location = window.location.protocol + '//' + window.location.host;
   store.set.resetGame();
 }
 </script>

@@ -54,7 +54,7 @@ let gameFinished = merge(
   countdown.pipe(map(() => undefined)),
   question.pipe(map(() => undefined)),
   subscribeToQuestionFinished().pipe(map((data) => (data ? 'questionFinished' : undefined))),
-);
+).pipe(tap((x) => console.log(x)));
 
 let guess = new Subject<[number, number] | undefined>();
 let lastResult = guess.pipe(
@@ -83,14 +83,14 @@ function onAnswerQuestion(event: CustomEvent) {
     <div class="overlay">{$countdown}</div>
   {/if}
   <Leaflet on:answerQuestion="{onAnswerQuestion}" />
-  {#if $question && $lastResult === undefined}
+  {#if $question && !$gameFinished}
     <div class="container">
       <div>Suche den Ort {$question}</div>
     </div>
-  {:else if $lastResult !== undefined}
+  {:else if $gameFinished}
     <div class="container">
       <div class="d-flex justify-content-spaced align-items-center width-100 p-4">
-        {#if $lastResult !== 0}
+        {#if $lastResult}
           <div id="party">Richtig 🥳</div>
           <PartyConfetti />
         {:else}

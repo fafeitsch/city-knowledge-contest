@@ -76,6 +76,20 @@ var useTileCacheFlag = &cli.BoolFlag{
 	Usage:       "If true, OSM tiles will be cached in the ./file directory for 180 days.",
 	Destination: &useTileCache,
 }
+var sslKey string
+var sslKeyFlag = &cli.StringFlag{
+	Name:        "sslKey",
+	Value:       "",
+	Usage:       "Path to the SSL key file.",
+	Destination: &sslKey,
+}
+var sslCert string
+var sslCertFlag = &cli.StringFlag{
+	Name:        "sslCert",
+	Value:       "",
+	Usage:       "Path to the SSL certificate file.",
+	Destination: &sslCert,
+}
 
 func main() {
 	app := cli.App{
@@ -89,6 +103,8 @@ func main() {
 			nominatimServerFlag,
 			tileServerFlag,
 			useTileCacheFlag,
+			sslCertFlag,
+			sslKeyFlag,
 		},
 		HideHelpCommand: true,
 		Action: func(context *cli.Context) error {
@@ -109,6 +125,12 @@ func main() {
 			log.Printf("Using Nominatim API backend at \"%s\"", geodata.NominatimServer)
 			log.Printf("Using Tile API backend at \"%s\"", tileServer)
 			log.Printf("Using Tile cache enabled: %v", useTileCache)
+			if sslKey != "" && sslCert != "" {
+				log.Printf("SSL key file: %s", sslKey)
+				log.Printf("SSL certificate file: %s", sslCert)
+				return http.ListenAndServeTLS(":"+strconv.Itoa(port), sslCert, sslKey, handler)
+			}
+			log.Printf("Running in unencrypted mode, should only be used for development and debugging.")
 			return http.ListenAndServe(":"+strconv.Itoa(port), handler)
 		},
 	}
