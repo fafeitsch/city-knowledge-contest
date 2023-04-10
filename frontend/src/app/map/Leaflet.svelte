@@ -1,11 +1,10 @@
 <script lang="ts">
 import L, { Icon, latLng, type LatLng, type Map, Marker } from 'leaflet';
-import { filter, map } from 'rxjs';
-import { createEventDispatcher, onMount } from 'svelte';
+import { filter, map, Subject, takeUntil } from 'rxjs';
+import { createEventDispatcher, onDestroy, onMount } from 'svelte';
 import { environment } from '../../environment';
-import store from '../../store';
 import img from '../../assets/images/pin.png';
-import { subscribeToQuestionFinished, subscribeToSocketTopic, Topic } from '../../sockets';
+import { subscribeToQuestionFinished, subscribeToRoomUpdated, subscribeToSocketTopic, Topic } from '../../sockets';
 
 let mapContainer: Map;
 
@@ -15,14 +14,17 @@ const markerIcon = new Icon({
   iconAnchor: [25, 50],
 });
 
-let marker: Marker;
-
+let marker: Marker | undefined = undefined;
+let destroy$ = new Subject<void>();
 let dispatch = createEventDispatcher();
 
 onMount(() => {
   mapContainer = createMap();
   subscribeToQuestionFinished()
-    .pipe(filter((result) => !!result))
+    .pipe(
+      takeUntil(destroy$),
+      filter((result) => !!result),
+    )
     .subscribe((value) => {
       if (marker !== undefined) {
         marker.removeFrom(mapContainer);
@@ -54,6 +56,11 @@ onMount(() => {
   };
 });
 
+onDestroy(() => {
+  destroy$.next(undefined);
+  destroy$.complete();
+});
+
 function createMap() {
   const map = L.map('mapContainer').setView(latLng(50, 10), 5);
 
@@ -64,8 +71,11 @@ function createMap() {
     maxZoom: 20,
   }).addTo(map);
 
-  map.flyTo({ lat: 49.79465390310462, lng: 9.929384801847446 }, 16);
-
+  subscribeToRoomUpdated()
+    .pipe(takeUntil(destroy$))
+    .subscribe((config) => {
+      map.flyTo({ lat: config.center[0], lng: config.center[1] }, 16);
+    });
   map.addEventListener('click', (e) => dispatch('answerQuestion', [e.latlng.lat, e.latlng.lng]));
 
   return map;

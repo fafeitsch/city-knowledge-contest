@@ -120,7 +120,7 @@ export type RoomConfiguration = {
   maxAnswerTimeSec: number;
 };
 
-export type RoomConfigurationResult = RoomConfiguration & { errors: string[] };
+export type RoomConfigurationResult = RoomConfiguration & { errors: string[]; center: [number, number] };
 
 export type Room = {
   playerKey: string;
