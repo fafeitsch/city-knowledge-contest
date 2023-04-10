@@ -18,14 +18,32 @@
 .container {
   z-index: 999;
   position: absolute;
-  bottom: 0;
+  bottom: 16px;
   display: flex;
   justify-content: center;
   align-items: center;
   height: 150px;
   width: 100vw;
-  background-color: $beige;
+}
+
+.card {
+  background-color: white;
+  border-radius: 16px;
+  width: 30%;
+  padding: 16px;
   font-size: xx-large;
+  font-family: 'LilitaOne';
+  text-align: center;
+}
+
+.wrong {
+  background-color: rgb(241, 156, 156);
+  color: red;
+}
+
+.correct {
+  background-color: rgb(150, 211, 150);
+  color: green;
 }
 </style>
 
@@ -44,6 +62,8 @@ import {
   Topic,
 } from '../../sockets';
 import rpc from '../../rpc';
+import { get } from 'svelte/store';
+import App from '../../App.svelte';
 
 let countdown = merge(
   subscribeToQuestion().pipe(map(() => undefined)),
@@ -57,15 +77,19 @@ let gameFinished = merge(
 ).pipe(tap((x) => console.log(x)));
 
 let guess = new Subject<[number, number] | undefined>();
-let lastResult = guess.pipe(
-  switchMap((guess) => {
-    if (!guess) {
-      return of(undefined);
-    }
-    return rpc.answerQuestion(guess);
-  }),
+let lastResult = merge(
+  guess.pipe(
+    switchMap((guess) => {
+      if (!guess) {
+        return of(undefined);
+      }
+      return rpc.answerQuestion(guess);
+    }),
+  ),
+  question.pipe(map(() => undefined)),
 );
 let players = store.get.players$;
+let room = store.get.room$;
 
 function advanceGame() {
   guess.next(undefined);
@@ -75,27 +99,30 @@ function advanceGame() {
 function onAnswerQuestion(event: CustomEvent) {
   guess.next(event.detail);
 }
+console.log($lastResult);
 </script>
 
 <div>
-  <Players players="{$players}" absolutePosition="true" />
+  <Players playerKey="{$room.playerKey}" players="{$players}" absolutePosition="{true}" />
   {#if $countdown}
     <div class="overlay">{$countdown}</div>
   {/if}
   <Leaflet on:answerQuestion="{onAnswerQuestion}" />
-  {#if $question && !$gameFinished}
+  {#if $question && !$gameFinished && $lastResult === undefined}
     <div class="container">
-      <div>Suche den Ort {$question}</div>
+      <div class="card">Suche den Ort {$question}</div>
     </div>
-  {:else if $gameFinished}
+  {:else if $gameFinished || $lastResult !== undefined}
     <div class="container">
-      <div class="d-flex justify-content-spaced align-items-center width-100 p-4">
-        {#if $lastResult}
-          <div id="party">Richtig 🥳</div>
-          <PartyConfetti />
-        {:else}
-          <div>Leider falsch 🤷</div>
-        {/if}
+      <div class="card">
+        <div class="mb-3">
+          {#if $lastResult}
+            <div>Richtig</div>
+            <PartyConfetti />
+          {:else}
+            <div>Falsch</div>
+          {/if}
+        </div>
         {#if $gameFinished}
           <Button on:click="{() => advanceGame()}" title="Weiter" />
         {/if}

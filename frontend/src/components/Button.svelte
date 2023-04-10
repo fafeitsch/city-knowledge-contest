@@ -34,7 +34,7 @@ button {
 <!-- Polygon shaped button inspired by https://www.codecraftsman.us/create-a-hexagonal-button-in-css/ -->
 <script lang="ts">
 export let title: string;
-export let disabled: boolean;
+export let disabled: boolean = false;
 </script>
 
 <button class="{disabled ? 'disabled' : ''}" on:click disabled="{disabled}">{title}</button>
