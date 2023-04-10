@@ -10,6 +10,7 @@ export type Player = {
   name: string;
   playerKey: string;
   points: number | undefined;
+  delta: number | undefined;
 };
 
 interface State {
@@ -49,16 +50,28 @@ const store = {
         players: newPlayers,
       });
     },
-    updatePlayerRanking(points: Record<string, number | undefined>) {
+    updatePlayerDelta(payload: { playerKey: string; pointsDelta: number }) {
       const newPlayers = state$.value.players
-        .map((player) => ({
-          ...player,
-          points: points[player.playerKey],
-        }))
+        .map((player) => {
+          if (payload.playerKey === player.playerKey) {
+            return {
+              ...player,
+              delta: payload.pointsDelta,
+              points: (player.points || 0) + payload.pointsDelta,
+            };
+          }
+          return player;
+        })
         .sort((playerA, playerB) => playerB.points - playerA.points);
       state$.next({
         ...state$.value,
         players: newPlayers,
+      });
+    },
+    removePlayerDelta() {
+      state$.next({
+        ...state$.value,
+        players: state$.value.players.map((player) => ({ ...player, delta: undefined })),
       });
     },
     game(game: Game) {

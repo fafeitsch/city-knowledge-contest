@@ -296,7 +296,7 @@ func (r *roomImpl) AnswerQuestion(playerKey string, guess types.Coordinate) (int
 	}
 	r.notifyPlayers(
 		func(player Player) {
-			player.NotifyPlayerAnswered(playerKey)
+			player.NotifyPlayerAnswered(playerKey, question.points[playerKey])
 		},
 	)
 	return question.points[playerKey], err
@@ -351,7 +351,7 @@ type Notifier interface {
 	NotifyPlayerJoined(string, string)
 	NotifyRoomUpdated(RoomOptions, string)
 	NotifyGameStarted(playerKey string, center types.Coordinate)
-	NotifyPlayerAnswered(string)
+	NotifyPlayerAnswered(string, int)
 	NotifyQuestionCountdown(int)
 	NotifyQuestion(string)
 	NotifyAnswerTimeCountdown(int)

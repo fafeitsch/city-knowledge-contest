@@ -36,7 +36,7 @@ import type { Player } from '../store';
 import { fly } from 'svelte/transition';
 import { flip } from 'svelte/animate';
 
-export let players: Player[];
+export let players: Player[] = [];
 export let absolutePosition = false;
 export let playerKey = '';
 </script>
@@ -52,7 +52,12 @@ export let playerKey = '';
         : ''}"
     >
       <div>{player.name}</div>
-      <div>{!player.points ? 0 : player.points} Punkte</div>
+      <div class="d-flex gap-2">
+        <div>{!player.points ? 0 : player.points} Punkte</div>
+        {#if player.delta}
+          <div>+ {player.delta}</div>
+        {/if}
+      </div>
     </div>
   {/each}
 </div>

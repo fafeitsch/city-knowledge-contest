@@ -151,8 +151,8 @@ func (w *websocketNotifier) NotifyGameEnded(reason string, result map[string]int
 	w.write(websocketMessage{Topic: "gameEnded", Payload: message})
 }
 
-func (w *websocketNotifier) NotifyPlayerAnswered(playerKey string) {
-	message := map[string]any{"playerKey": playerKey}
+func (w *websocketNotifier) NotifyPlayerAnswered(playerKey string, points int) {
+	message := map[string]any{"playerKey": playerKey, "pointsDelta": points}
 	w.write(websocketMessage{Topic: "playerAnswered", Payload: message})
 }
 

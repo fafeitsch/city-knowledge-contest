@@ -34,8 +34,10 @@ export function initWebSocket() {
         store.set.players(data.payload.players);
       } else if (data.topic === 'playerJoined') {
         store.set.addPlayer(data.payload);
-      } else if (data.topic === 'questionFinished') {
-        store.set.updatePlayerRanking(data.payload.points);
+      } else if (data.topic === 'playerAnswered') {
+        store.set.updatePlayerDelta(data.payload);
+      } else if (data.topic === 'question' || data.topic === 'questionCountdown') {
+        store.set.removePlayerDelta();
       }
     };
   });
