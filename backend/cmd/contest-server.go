@@ -90,6 +90,20 @@ var sslCertFlag = &cli.StringFlag{
 	Usage:       "Path to the SSL certificate file.",
 	Destination: &sslCert,
 }
+var imprintFile string
+var imprintFileFlag = &cli.StringFlag{
+	Name:        "imprintFile",
+	Value:       "",
+	Usage:       "Path to the imprint file.",
+	Destination: &imprintFile,
+}
+var dataProtectionFile string
+var dataProtectionFileFlag = &cli.StringFlag{
+	Name:        "dataProtectionFile",
+	Value:       "",
+	Usage:       "Path to the data protection file.",
+	Destination: &dataProtectionFile,
+}
 
 func main() {
 	app := cli.App{
@@ -105,19 +119,23 @@ func main() {
 			useTileCacheFlag,
 			sslCertFlag,
 			sslKeyFlag,
+			dataProtectionFileFlag,
+			imprintFileFlag,
 		},
 		HideHelpCommand: true,
 		Action: func(context *cli.Context) error {
+			geodata.NominatimServer = nominatimServer
 			handler := webapi.New(
 				webapi.Options{
-					AllowCors:    allowCors,
-					TileServer:   tileServer,
-					UseTileCache: useTileCache,
+					AllowCors:          allowCors,
+					TileServer:         tileServer,
+					UseTileCache:       useTileCache,
+					DataProtectionFile: dataProtectionFile,
+					ImprintFile:        imprintFile,
 				},
 			)
 			keygen.SetPlayerKeyLength(playerKeyLength)
 			keygen.SetRoomKeyLength(roomKeyLength)
-			geodata.NominatimServer = nominatimServer
 			log.Printf("Starting server on port %d", port)
 			log.Printf("CORS mode enabled: %v", allowCors)
 			log.Printf("Room key length set to %d", roomKeyLength)
@@ -125,6 +143,8 @@ func main() {
 			log.Printf("Using Nominatim API backend at \"%s\"", geodata.NominatimServer)
 			log.Printf("Using Tile API backend at \"%s\"", tileServer)
 			log.Printf("Using Tile cache enabled: %v", useTileCache)
+			log.Printf("Using data protection file at \"%s\"", dataProtectionFile)
+			log.Printf("Using imprint file at \"%s\"", imprintFile)
 			if sslKey != "" && sslCert != "" {
 				log.Printf("SSL key file: %s", sslKey)
 				log.Printf("SSL certificate file: %s", sslCert)

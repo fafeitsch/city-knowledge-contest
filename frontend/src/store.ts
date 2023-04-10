@@ -55,7 +55,7 @@ const store = {
           ...player,
           points: points[player.playerKey],
         }))
-        .sort((playerA, playerB) => playerA.points - playerB.points);
+        .sort((playerA, playerB) => playerB.points - playerA.points);
       state$.next({
         ...state$.value,
         players: newPlayers,

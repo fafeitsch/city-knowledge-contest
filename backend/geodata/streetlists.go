@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"net/http"
 	url2 "net/url"
 	"path/filepath"
 	"strconv"
@@ -95,6 +96,8 @@ func (s *StreetList) GetRandomStreet(random *rand.Rand) (Street, error) {
 	street := s.Streets[index]
 	template := NominatimServer + "/search?street=%s&format=json&city=%s&country=%s"
 	url := fmt.Sprintf(template, url2.QueryEscape(street), url2.QueryEscape(s.City), url2.QueryEscape(s.Country))
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("User-Agent", "City-Knowledge-Contest, github.com/fafeitsch/city-knowledge-contest")
 	response, err := client.Get(url)
 	if err != nil {
 		log.Printf("could not query nominatim using url \"%s\": %v", url, err)

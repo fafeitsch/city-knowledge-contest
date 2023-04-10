@@ -9,10 +9,11 @@
   right: 0;
   width: 300px;
   max-height: 400px;
-  overflow: auto;
   background-color: white;
   border-radius: 16px;
   padding: 16px;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .player {

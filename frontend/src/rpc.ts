@@ -102,6 +102,14 @@ const rpc = {
   getStreetLists(): Observable<StreetList[]> {
     return doRpc<StreetList[]>('getAvailableStreetLists', {});
   },
+  getLegalInformation(): Observable<{
+    imprint: string;
+    dataProtection: string;
+    tileServer: string;
+    nominatimServer: string;
+  }> {
+    return doRpc('getLegalInformation', {});
+  },
 };
 
 export default rpc;

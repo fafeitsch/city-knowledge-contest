@@ -4,8 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/fafeitsch/city-knowledge-contest/backend/contest"
+	"github.com/fafeitsch/city-knowledge-contest/backend/geodata"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"runtime/debug"
 	"strings"
 )
@@ -27,6 +30,11 @@ func New(options Options) *RpcServer {
 		"answerQuestion":          roomContainer.answerQuestion,
 		"advanceGame":             roomContainer.advanceGame,
 		"getAvailableStreetLists": listStreetListFiles,
+		"getLegalInformation": getLegalInformation(
+			options.ImprintFile,
+			options.DataProtectionFile,
+			options.TileServer,
+		),
 	}
 	return &RpcServer{
 		methods: methods,
@@ -34,6 +42,47 @@ func New(options Options) *RpcServer {
 		upgrader: func(resp http.ResponseWriter, req *http.Request) error {
 			return roomContainer.upgradeToWebSocket(resp, req, options)
 		},
+	}
+}
+
+func getLegalInformation(imprintFile string, dataProtectionFile string, tileServer string) rpcHandler {
+	imprint, err := ioutil.ReadFile(imprintFile)
+	imprintText := ""
+	if err != nil {
+		log.Printf("could not read imprint file: %v", err)
+		imprintText = "<article>Imprint not configured or not readable. Please configure or correct backend server configuration.</article>"
+	} else {
+		imprintText = string(imprint)
+	}
+	dataProtection, err := ioutil.ReadFile(dataProtectionFile)
+	dataProtectionText := ""
+	if err != nil {
+		log.Printf("could not read data protection file: %v", err)
+		dataProtectionText = "<article>Data protection not configured or not readable. Please configure or correct backend server configuration.</article>"
+	} else {
+		dataProtectionText = string(dataProtection)
+	}
+	tileServerUrl, err := url.Parse(tileServer)
+	tileServerBase := tileServer
+	if err == nil {
+		tileServerBase = tileServerUrl.Host
+	}
+	nominatimServerUrl, err := url.Parse(geodata.NominatimServer)
+	nominatimServerBase := geodata.NominatimServer
+	if err == nil {
+		nominatimServerBase = nominatimServerUrl.Host
+	}
+	return func(message json.RawMessage) (*rpcRequestContext, error) {
+		return &rpcRequestContext{
+			process: func() (any, error) {
+				return map[string]string{
+					"imprint":         imprintText,
+					"dataProtection":  dataProtectionText,
+					"tileServer":      tileServerBase,
+					"nominatimServer": nominatimServerBase,
+				}, nil
+			},
+		}, nil
 	}
 }
 
