@@ -1,13 +1,5 @@
 @import './variables';
 
-.bg-old-map {
-    background-color: $old-map;
-}
-
-.bg-old-map-lighter {
-    background-color: $beige;
-}
-
 .full-viewheight {
     height: 100vh;
 }
@@ -18,8 +10,4 @@
 
 .color-black {
     color: black
-}
-
-.color-brown {
-    color: $brown;
 }

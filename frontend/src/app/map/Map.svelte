@@ -35,16 +35,6 @@
   font-family: 'LilitaOne';
   text-align: center;
 }
-
-.wrong {
-  background-color: rgb(241, 156, 156);
-  color: red;
-}
-
-.correct {
-  background-color: rgb(150, 211, 150);
-  color: green;
-}
 </style>
 
 <script lang="ts">

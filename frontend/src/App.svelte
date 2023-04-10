@@ -129,9 +129,9 @@ function showOsmServicesDialog() {
       <button on:click="{showDataProtectionDialog}">Datenschutz</button> |
       <button on:click="{showOsmServicesDialog}">OSM-Services</button>
       |
-      <a href="https://github.com/fafeitsch/city-knowledge-contest" target="_blank">Projekt auf Github</a>
+      <a href="https://github.com/fafeitsch/city-knowledge-contest" target="_blank" rel="noreferrer">Projekt auf Github</a>
       |
-      <a href="https://www.flaticon.com/free-icons/location-pin" title="location pin icons" target="_blank"
+      <a href="https://www.flaticon.com/free-icons/location-pin" title="location pin icons" target="_blank" rel="noreferrer"
         >Location pin icons created by Smashicons - Flaticon</a
       >
     </div>
