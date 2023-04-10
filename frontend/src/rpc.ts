@@ -27,7 +27,6 @@ const rpc = {
   updateRoomConfiguration(configuration: RoomConfiguration): Observable<string[]> {
     return store.get.room$.pipe(
       take(1),
-      tap((x) => console.log(x)),
       switchMap((authData) =>
         doRpc<{ errors: string[] }>('updateRoom', {
           ...authData,

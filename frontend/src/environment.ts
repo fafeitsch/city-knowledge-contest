@@ -1,5 +1,4 @@
 const isSsl = window.location.protocol === 'https:';
-console.log(window.location.host, window.location, window.location.hostname, window.location.port);
 export const environment: Record<string, { wsUrl: string; apiUrl: string; tileUrl: string }> = {
   development: {
     wsUrl: 'ws://localhost:23123/ws/',

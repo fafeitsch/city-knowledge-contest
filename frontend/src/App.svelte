@@ -38,6 +38,7 @@ import {
   subscribeToGameEnded,
   subscribeToQuestion,
   subscribeToSocketTopic,
+  subscribeToSuccessfullyJoined,
   Topic,
 } from './sockets';
 import Legal from './components/Legal.svelte';
@@ -64,7 +65,14 @@ let osmServicesInfo = legalInfo.pipe(
 );
 
 let gameState = merge(
-  subscribeToSocketTopic(Topic.successfullyJoined).pipe(map((data) => (data ? 'Waiting' : undefined))),
+  subscribeToSuccessfullyJoined().pipe(
+    map((data) => {
+      if (data?.started) {
+        return 'Question';
+      }
+      return data ? 'Waiting' : undefined;
+    }),
+  ),
   subscribeToCountdown().pipe(map((data) => (data ? 'Question' : undefined))),
   subscribeToQuestion().pipe(map((data) => (data ? 'Question' : undefined))),
   subscribeToGameEnded().pipe(map((data) => (data ? 'GameEnded' : undefined))),

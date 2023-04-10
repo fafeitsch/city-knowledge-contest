@@ -34,6 +34,8 @@ export function initWebSocket() {
         store.set.players(data.payload.players);
       } else if (data.topic === 'playerJoined') {
         store.set.addPlayer(data.payload);
+      } else if (data.topic === 'questionFinished') {
+        store.set.updatePlayerRanking(data.payload.points);
       } else if (data.topic === 'playerAnswered') {
         store.set.updatePlayerDelta(data.payload);
       } else if (data.topic === 'question' || data.topic === 'questionCountdown') {
@@ -57,6 +59,10 @@ export function subscribeToJoined(): Observable<{ options: RoomConfigurationResu
 
 export function subscribeToRoomUpdated(): Observable<RoomConfigurationResult> {
   return subscribeToSocketTopic<RoomConfigurationResult>(Topic.roomUpdated);
+}
+
+export function subscribeToSuccessfullyJoined(): Observable<{ started: boolean; options: RoomConfigurationResult }> {
+  return subscribeToSocketTopic(Topic.successfullyJoined);
 }
 
 export type GameResult = {

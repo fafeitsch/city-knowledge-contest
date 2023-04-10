@@ -74,7 +74,7 @@ let gameFinished = merge(
   countdown.pipe(map(() => undefined)),
   question.pipe(map(() => undefined)),
   subscribeToQuestionFinished().pipe(map((data) => (data ? 'questionFinished' : undefined))),
-).pipe(tap((x) => console.log(x)));
+);
 
 let guess = new Subject<[number, number] | undefined>();
 let lastResult = merge(
@@ -99,7 +99,6 @@ function advanceGame() {
 function onAnswerQuestion(event: CustomEvent) {
   guess.next(event.detail);
 }
-console.log($lastResult);
 </script>
 
 <div>

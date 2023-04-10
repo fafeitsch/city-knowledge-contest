@@ -22,7 +22,9 @@ func (r *roomContainer) upgradeToWebSocket(writer http.ResponseWriter, request *
 		return nil
 	}
 	//secret := request.Header.Get("ckc-player-secret")
+	room.Lock()
 	player, _ := room.FindPlayer(parts[3])
+	room.Unlock()
 	//if !ok || player.Secret != secret {
 	//	writer.WriteHeader(http.StatusUnauthorized)
 	//	return nil
@@ -49,12 +51,23 @@ func (r *roomContainer) upgradeToWebSocket(writer http.ResponseWriter, request *
 			},
 		)
 	}
+	room.Lock()
 	_ = wsjson.Write(
 		request.Context(), connection, websocketMessage{
-			Topic:   "successfullyJoined",
-			Payload: initialJoinMessage{Players: players, Options: convertRoomOptions(room.Options(), "")},
+			Topic: "successfullyJoined",
+			Payload: initialJoinMessage{
+				Players: players,
+				Options: convertRoomOptions(room.Options(), ""),
+				Started: room.Started(),
+			},
 		},
 	)
+	room.Unlock()
+	if room.HasActiveQuestion() {
+		room.Lock()
+		notifier.NotifyQuestion(room.Question())
+		room.Unlock()
+	}
 	log.Printf("Established websocket connection to player \"%s\" (\"%s\").", player.Key, player.Name)
 	closeContext := connection.CloseRead(request.Context())
 	var pingErr error
@@ -75,6 +88,7 @@ type websocketMessage struct {
 type initialJoinMessage struct {
 	Players []playerInfo      `json:"players"`
 	Options roomUpdateMessage `json:"options"`
+	Started bool              `json:"started"`
 }
 
 type playerInfo struct {

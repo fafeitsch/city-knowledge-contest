@@ -1,10 +1,16 @@
 <script lang="ts">
 import L, { Icon, latLng, type LatLng, type Map, Marker } from 'leaflet';
-import { filter, map, Subject, takeUntil } from 'rxjs';
+import { filter, map, merge, of, Subject, switchMap, take, takeUntil, tap } from 'rxjs';
 import { createEventDispatcher, onDestroy, onMount } from 'svelte';
 import { environment } from '../../environment';
 import img from '../../assets/images/pin.png';
-import { subscribeToQuestionFinished, subscribeToRoomUpdated, subscribeToSocketTopic, Topic } from '../../sockets';
+import {
+  subscribeToQuestionFinished,
+  subscribeToRoomUpdated,
+  subscribeToSocketTopic,
+  subscribeToSuccessfullyJoined,
+  Topic,
+} from '../../sockets';
 
 let mapContainer: Map;
 
@@ -62,23 +68,35 @@ onDestroy(() => {
 });
 
 function createMap() {
-  const map = L.map('mapContainer').setView(latLng(50, 10), 5);
+  const leafletMap = L.map('mapContainer').setView(latLng(50, 10), 5);
 
   L.tileLayer(environment[import.meta.env.MODE].tileUrl, {
     attribution: `&copy;<a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>,
 	        &copy;<a href="https://carto.com/attributions" target="_blank">CARTO</a>`,
     subdomains: 'abcd',
     maxZoom: 20,
-  }).addTo(map);
+  }).addTo(leafletMap);
 
-  subscribeToRoomUpdated()
-    .pipe(takeUntil(destroy$))
+  merge(subscribeToRoomUpdated())
+    .pipe(
+      switchMap((data) => {
+        if (!data) {
+          return subscribeToSuccessfullyJoined().pipe(
+            take(1),
+            map((payload) => payload.options),
+          );
+        }
+        return of(data);
+      }),
+      takeUntil(destroy$),
+      filter((data) => !!data),
+    )
     .subscribe((config) => {
-      map.flyTo({ lat: config.center[0], lng: config.center[1] }, 16);
+      leafletMap.flyTo({ lat: config.center[0], lng: config.center[1] }, 16);
     });
-  map.addEventListener('click', (e) => dispatch('answerQuestion', [e.latlng.lat, e.latlng.lng]));
+  leafletMap.addEventListener('click', (e) => dispatch('answerQuestion', [e.latlng.lat, e.latlng.lng]));
 
-  return map;
+  return leafletMap;
 }
 </script>
 

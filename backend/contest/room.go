@@ -24,11 +24,13 @@ type Room interface {
 	Play(string)
 	AnswerQuestion(string, types.Coordinate) (int, error)
 	HasActiveQuestion() bool
+	Question() string
 	CanBeAdvanced() bool
 	AdvanceToNextQuestion()
 	Key() string
 	Finished() bool
 	Creation() time.Time
+	Started() bool
 }
 
 type roomImpl struct {
@@ -42,6 +44,7 @@ type roomImpl struct {
 	currentQuestion *Question
 	advanceGame     chan bool
 	finished        bool
+	started         bool
 }
 
 func (r *roomImpl) Key() string {
@@ -195,6 +198,7 @@ func (r *roomImpl) Play(playerKey string) {
 	numberOfQuestions := r.options.NumberOfQuestions
 	r.points = make(map[string]int)
 	go func() {
+		r.started = true
 		for round := 0; round < numberOfQuestions; round++ {
 			err := r.playQuestion(round)
 			if err != nil {
@@ -291,19 +295,23 @@ func (r *roomImpl) AnswerQuestion(playerKey string, guess types.Coordinate) (int
 	} else {
 		question.points[playerKey] = 0
 	}
-	if len(question.points) == len(r.players) {
-		question.allPlayersAnswered <- true
-	}
 	r.notifyPlayers(
 		func(player Player) {
 			player.NotifyPlayerAnswered(playerKey, question.points[playerKey])
 		},
 	)
+	if len(question.points) == len(r.players) {
+		question.allPlayersAnswered <- true
+	}
 	return question.points[playerKey], err
 }
 
 func (r *roomImpl) HasActiveQuestion() bool {
 	return r.currentQuestion != nil
+}
+
+func (r *roomImpl) Question() string {
+	return r.currentQuestion.Street.Name
 }
 
 func (r *roomImpl) CanBeAdvanced() bool {
@@ -323,6 +331,10 @@ func (r *roomImpl) sendCountdowns(amount int, consumer func(Player) func(int)) {
 		)
 		time.Sleep(time.Second)
 	}
+}
+
+func (r *roomImpl) Started() bool {
+	return r.started
 }
 
 func (r *roomImpl) Finished() bool {
