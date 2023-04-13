@@ -6,7 +6,9 @@
   gap: 8px;
 }
 
-.init-game-container {
+.save-name-notice {
+  width: 400px;
+  line-height: 1.5;
 }
 </style>
 
@@ -66,6 +68,10 @@ async function joinRoom() {
     <div>Wer findet die gesuchten Orte am schnellsten?</div>
   </div>
   <Card>
+    <span class="save-name-notice"
+      >Mit der Eingabe eines Pseudonyms erklärst du dich damit einverstanden, dass dieses in deinem Browser gespeichert
+      wird. So musst du es beim nächsten Spiel nicht erneut eingeben.</span
+    >
     <Input on:input="{handleUsernameChange}" placeholder="Wie heißt du?" value="{userName}" />
     {#if roomKey.length < 1}
       <Button title="Neue Karte erstellen" on:click="{createRoom}" disabled="{!userName}" />
