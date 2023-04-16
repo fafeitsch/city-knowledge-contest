@@ -1,16 +1,11 @@
 <script lang="ts">
-import L, { Icon, latLng, type LatLng, type Map, Marker } from 'leaflet';
-import { filter, map, merge, of, Subject, switchMap, take, takeUntil, tap } from 'rxjs';
+import L, { Icon, latLng, type LatLng, type Map, Marker, TileLayer } from 'leaflet';
+import { delay, filter, map, merge, of, Subject, switchMap, take, takeUntil, tap } from 'rxjs';
 import { createEventDispatcher, onDestroy, onMount } from 'svelte';
 import { environment } from '../../environment';
 import img from '../../assets/images/pin.png';
-import {
-  subscribeToQuestionFinished,
-  subscribeToRoomUpdated,
-  subscribeToSocketTopic,
-  subscribeToSuccessfullyJoined,
-  Topic,
-} from '../../sockets';
+import { subscribeToQuestionFinished, subscribeToRoomUpdated, subscribeToSuccessfullyJoined } from '../../sockets';
+import store from '../../store';
 
 let mapContainer: Map;
 
@@ -54,36 +49,34 @@ onMount(() => {
           marker.addTo(mapContainer);
         });
     });
-  return {
-    destroy: () => {
-      mapContainer.remove();
-      mapContainer = null;
-    },
-  };
 });
 
 onDestroy(() => {
   destroy$.next(undefined);
   destroy$.complete();
+  mapContainer.remove();
+  mapContainer = null;
 });
 
 function createMap() {
   const leafletMap = L.map('mapContainer').setView(latLng(50, 10), 5);
-
-  L.tileLayer(environment[import.meta.env.MODE].tileUrl, {
-    attribution: `&copy;<a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>,
-	        &copy;<a href="https://carto.com/attributions" target="_blank">CARTO</a>`,
-    subdomains: 'abcd',
-    maxZoom: 20,
-  }).addTo(leafletMap);
-
-  merge(subscribeToRoomUpdated())
+  let layer: TileLayer | undefined = undefined;
+  store.get.room$.pipe(takeUntil(destroy$)).subscribe((room) => {
+    if (layer) {
+      layer.removeFrom(leafletMap);
+    }
+    console.log('setting up tile layer');
+    layer = L.tileLayer(environment[import.meta.env.MODE].tileUrl.replace('roomKey', room.roomKey), {
+      attribution: `&copy;<a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>`,
+    }).addTo(leafletMap);
+  });
+  subscribeToRoomUpdated()
     .pipe(
       switchMap((data) => {
         if (!data) {
           return subscribeToSuccessfullyJoined().pipe(
-            take(1),
             map((payload) => payload.options),
+            take(1),
           );
         }
         return of(data);
@@ -92,7 +85,14 @@ function createMap() {
       filter((data) => !!data),
     )
     .subscribe((config) => {
-      leafletMap.flyTo({ lat: config.center[0], lng: config.center[1] }, 16);
+      leafletMap.invalidateSize();
+      if (config?.boundingBox) {
+        leafletMap.setMaxBounds(config.boundingBox);
+        leafletMap.options.maxBoundsViscosity = 1;
+      }
+      leafletMap.setMinZoom(config.minZoom);
+      leafletMap.setMaxZoom(config.maxZoom);
+      leafletMap.flyTo({ lat: config.center[0], lng: config.center[1] }, config.maxZoom / 2 + config.minZoom / 2);
     });
   leafletMap.addEventListener('click', (e) => dispatch('answerQuestion', [e.latlng.lat, e.latlng.lng]));
 

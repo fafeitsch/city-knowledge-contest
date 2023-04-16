@@ -3,7 +3,6 @@ package webapi
 import (
 	"fmt"
 	"github.com/fafeitsch/city-knowledge-contest/backend/contest"
-	"github.com/fafeitsch/city-knowledge-contest/backend/types"
 	"log"
 	"net/http"
 	"nhooyr.io/websocket"
@@ -97,12 +96,15 @@ type playerInfo struct {
 }
 
 type roomUpdateMessage struct {
-	ListFileName      string     `json:"listFileName"`
-	Center            [2]float64 `json:"center"`
-	NumberOfQuestions int        `json:"numberOfQuestions"`
-	MaxAnswerTimeSec  int        `json:"maxAnswerTimeSec"`
-	PlayerKey         string     `json:"playerKey,omitempty"`
-	Errors            []string   `json:"errors"`
+	ListFileName      string         `json:"listFileName"`
+	BoundingBox       *[2][2]float64 `json:"boundingBox,omitempty"`
+	Center            [2]float64     `json:"center,omitempty"`
+	MinZoom           int            `json:"minZoom"`
+	MaxZoom           int            `json:"maxZoom"`
+	NumberOfQuestions int            `json:"numberOfQuestions"`
+	MaxAnswerTimeSec  int            `json:"maxAnswerTimeSec"`
+	PlayerKey         string         `json:"playerKey,omitempty"`
+	Errors            []string       `json:"errors"`
 }
 
 type websocketNotifier struct {
@@ -124,8 +126,8 @@ func (w *websocketNotifier) NotifyRoomUpdated(options contest.RoomOptions, playe
 	)
 }
 
-func (w *websocketNotifier) NotifyGameStarted(playerKey string, center types.Coordinate) {
-	message := map[string]any{"playerKey": playerKey, "center": [2]float64{center.Lat, center.Lng}}
+func (w *websocketNotifier) NotifyGameStarted(playerKey string) {
+	message := map[string]any{"playerKey": playerKey}
 	w.write(websocketMessage{Topic: "gameStarted", Payload: message})
 }
 
@@ -175,13 +177,28 @@ func convertRoomOptions(options contest.RoomOptions, playerKey string) roomUpdat
 	if options.StreetList != nil {
 		listName = options.StreetList.FileName
 	}
-	center := [2]float64{0, 0}
+	var boundingBox *[2][2]float64
+	var center [2]float64
+	var minZoom = 1
+	var maxZoom = 19
 	if options.StreetList != nil {
-		center = [2]float64{options.StreetList.Center.Lat, options.StreetList.Center.Lng}
+		mapOptions := options.StreetList.MapOptions
+		if mapOptions.BoundingBox != nil {
+			boundingBox = &[2][2]float64{
+				{mapOptions.BoundingBox.MinLat, mapOptions.BoundingBox.MinLng},
+				{mapOptions.BoundingBox.MaxLat, mapOptions.BoundingBox.MaxLng},
+			}
+		}
+		center = [2]float64{mapOptions.Center.Lat, mapOptions.Center.Lng}
+		minZoom = mapOptions.MinZoom
+		maxZoom = mapOptions.MaxZoom
 	}
 	message := roomUpdateMessage{
 		ListFileName:      listName,
+		BoundingBox:       boundingBox,
 		Center:            center,
+		MinZoom:           minZoom,
+		MaxZoom:           maxZoom,
 		MaxAnswerTimeSec:  int(options.MaxAnswerTime / time.Second),
 		NumberOfQuestions: options.NumberOfQuestions,
 		PlayerKey:         playerKey,

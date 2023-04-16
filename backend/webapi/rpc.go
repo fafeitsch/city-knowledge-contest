@@ -7,7 +7,11 @@ import (
 	"github.com/fafeitsch/city-knowledge-contest/backend/geodata"
 	"github.com/fafeitsch/city-knowledge-contest/backend/types"
 	"log"
+	"math"
+	"net/http"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -35,6 +39,28 @@ type createRoomResponse struct {
 	PlayerSecret      string   `json:"playerSecret"`
 	NumberOfQuestions int      `json:"numberOfQuestions"`
 	Errors            []string `json:"errors"`
+}
+
+func (r *roomContainer) isValidTileRequest(req *http.Request) bool {
+	parts := strings.Split(req.RequestURI, "/")
+	roomKey := parts[2]
+	z, errZ := strconv.Atoi(parts[3])
+	x, errX := strconv.Atoi(parts[4])
+	y, errY := strconv.Atoi(parts[5])
+	r.RLock()
+	room, ok := r.openRooms[roomKey]
+	r.RUnlock()
+	if errZ != nil || errX != nil || errY != nil || !ok || room.Options().StreetList == nil {
+		return false
+	}
+	boundingBox := room.Options().StreetList.MapOptions.BoundingBox
+	if boundingBox == nil {
+		return true
+	}
+	n := math.Pi - 2.0*math.Pi*float64(y)/math.Exp2(float64(z))
+	lat := 180.0 / math.Pi * math.Atan(0.5*(math.Exp(n)-math.Exp(-n)))
+	lng := float64(x)/math.Exp2(float64(z))*360.0 - 180.0
+	return lat < boundingBox.MaxLat && lat > boundingBox.MinLat && lng < boundingBox.MaxLng && lng > boundingBox.MinLng
 }
 
 func (r *roomContainer) createRoom(message json.RawMessage) (*rpcRequestContext, error) {

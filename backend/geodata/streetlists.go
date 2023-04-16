@@ -14,13 +14,20 @@ import (
 	"sync"
 )
 
-var StreetListDirectory = "./streetlists"
+var StreetListDirectory = "streetlists"
 var NominatimServer = "https://nominatim.openstreetmap.org"
 
 type StreetListHeader struct {
-	FileName string
-	Name     string           `json:"name"`
-	Center   types.Coordinate `json:"center"`
+	FileName   string
+	Name       string     `json:"name"`
+	MapOptions MapOptions `json:"map"`
+}
+
+type MapOptions struct {
+	BoundingBox *BoundingBox     `json:"boundingBox"`
+	Center      types.Coordinate `json:"center"`
+	MinZoom     int              `json:"minZoom"`
+	MaxZoom     int              `json:"maxZoom"`
 }
 
 func ReadStreetLists() ([]StreetListHeader, error) {
@@ -75,13 +82,20 @@ func ReadStreetList(fileName string) (*StreetList, error) {
 }
 
 type StreetList struct {
-	mutex    sync.Mutex
-	FileName string
-	Country  string           `json:"country"`
-	City     string           `json:"city"`
-	Name     string           `json:"name"`
-	Center   types.Coordinate `json:"center"`
-	Streets  []string         `json:"streets"`
+	mutex      sync.Mutex
+	FileName   string
+	Country    string     `json:"country"`
+	City       string     `json:"city"`
+	Name       string     `json:"name"`
+	MapOptions MapOptions `json:"map"`
+	Streets    []string   `json:"streets"`
+}
+
+type BoundingBox struct {
+	MinLat float64 `json:"minLat"`
+	MinLng float64 `json:"minLng"`
+	MaxLat float64 `json:"maxLat"`
+	MaxLng float64 `json:"maxLng"`
 }
 
 type Street struct {

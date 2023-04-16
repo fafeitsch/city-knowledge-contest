@@ -192,7 +192,7 @@ func (r *roomImpl) Play(playerKey string) {
 	}
 	r.notifyPlayers(
 		func(player Player) {
-			player.NotifyGameStarted(startPlayer.Key, r.options.StreetList.Center)
+			player.NotifyGameStarted(startPlayer.Key)
 		},
 	)
 	numberOfQuestions := r.options.NumberOfQuestions
@@ -362,7 +362,7 @@ type QuestionResult struct {
 type Notifier interface {
 	NotifyPlayerJoined(string, string)
 	NotifyRoomUpdated(RoomOptions, string)
-	NotifyGameStarted(playerKey string, center types.Coordinate)
+	NotifyGameStarted(playerKey string)
 	NotifyPlayerAnswered(string, int)
 	NotifyQuestionCountdown(int)
 	NotifyQuestion(string)

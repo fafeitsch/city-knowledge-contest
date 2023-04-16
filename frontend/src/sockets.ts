@@ -1,7 +1,7 @@
 import store from './store';
-import { BehaviorSubject, filter, Observable, tap } from 'rxjs';
+import { BehaviorSubject, Observable } from 'rxjs';
 import { environment } from './environment';
-import type { RoomConfigurationResult } from './rpc';
+import type { RoomConfiguration } from './rpc';
 
 export enum Topic {
   'roomUpdated' = 'roomUpdated',
@@ -61,9 +61,19 @@ export function subscribeToRoomUpdated(): Observable<RoomConfigurationResult> {
   return subscribeToSocketTopic<RoomConfigurationResult>(Topic.roomUpdated);
 }
 
-export function subscribeToSuccessfullyJoined(): Observable<{ started: boolean; options: RoomConfigurationResult }> {
+export function subscribeToSuccessfullyJoined(): Observable<SuccessfulJoinResult> {
   return subscribeToSocketTopic(Topic.successfullyJoined);
 }
+
+export type SuccessfulJoinResult = { options: RoomConfigurationResult; started: boolean };
+
+export type RoomConfigurationResult = RoomConfiguration & {
+  errors: string[];
+  center: [number, number];
+  minZoom: number;
+  maxZoom: number;
+  boundingBox?: [[number, number], [number, number]];
+};
 
 export type GameResult = {
   delta: Record<string, number>;

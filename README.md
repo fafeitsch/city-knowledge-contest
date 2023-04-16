@@ -18,17 +18,33 @@ In order to play, you need meet three non-technical requirements:
         "country": "Germany",
         "city": "Würzburg",
         "name": "Würzburg",
-        "center": {
-            "lng": 9.933333,
-            "lat": 49.8
+        "map": {
+            "center": {
+              "lng": 9.931641,
+              "lat": 49.793621
+            },
+            "boundingBox": {
+              "minLat": 49.752880,
+              "maxLat": 49.839865,
+              "minLng": 9.837742,
+              "maxLng": 10.051975
+            },
+            "minZoom": 14,
+            "maxZoom": 18
         },
         "streets":["Ingolstadter Hof","Bahnhofstraße",…]
    }
    ```
    The `name` property donates the name of the list as shown in the game setup.
-   The `streets` array contains the list of streets that might be asked in game: Opon every round, the app will randomly choose a street and 
+   
+   The `streets` array contains the list of streets that might be asked in game: Upon every round, the app will randomly choose a street and 
    and query [Nominatim](https://nominatim.org/) for the solution.
    It will use `country` and `city` to refine the query. 
+   
+   The  `map` object contains: 
+     * the `center` of the map: all players start playing there
+     * an optional `boundingBox`: players may only move within the bounding box. It prevents others from using the game's backend as tile server.
+     * `minZoom` and `maxZoom`: self-explanatory. The initial zoom is the average from both values.
 2. Access to a Nominatim server. We recommend [hosting your own Nominatim server](https://github.com/mediagis/nominatim-docker).
    The Nominatim server is used to get the solution for the randomly chosen street, as well as for checking the players' answers.
 3. Access to an Openstreet Map Tile server. Per default, the app uses the publicly available OSM tile servers,

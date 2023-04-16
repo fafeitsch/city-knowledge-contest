@@ -14,9 +14,10 @@ import (
 )
 
 type RpcServer struct {
-	methods  map[string]rpcHandler
-	options  Options
-	upgrader func(w http.ResponseWriter, req *http.Request) error
+	methods       map[string]rpcHandler
+	options       Options
+	upgrader      func(w http.ResponseWriter, req *http.Request) error
+	roomContainer roomContainer
 }
 
 func New(options Options) *RpcServer {
@@ -31,9 +32,7 @@ func New(options Options) *RpcServer {
 		"advanceGame":             roomContainer.advanceGame,
 		"getAvailableStreetLists": listStreetListFiles,
 		"getLegalInformation": getLegalInformation(
-			options.ImprintFile,
-			options.DataProtectionFile,
-			options.TileServer,
+			options.ImprintFile, options.DataProtectionFile, options.TileServer,
 		),
 	}
 	return &RpcServer{
@@ -42,6 +41,7 @@ func New(options Options) *RpcServer {
 		upgrader: func(resp http.ResponseWriter, req *http.Request) error {
 			return roomContainer.upgradeToWebSocket(resp, req, options)
 		},
+		roomContainer: roomContainer,
 	}
 }
 
@@ -89,7 +89,17 @@ func getLegalInformation(imprintFile string, dataProtectionFile string, tileServ
 func (r *RpcServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	parts := strings.Split(req.RequestURI, "/")
 	if len(parts) > 2 && parts[1] == "tile" {
-		r.serveTile(parts, resp)
+		if r.roomContainer.isValidTileRequest(req) {
+			r.serveTile(parts, resp)
+		} else {
+			resp.WriteHeader(http.StatusBadRequest)
+			_, _ = resp.Write(
+				[]byte(fmt.Sprintf(
+					"Invalid tile request, room may not exist or not yet started, or tile is out of scope: %s",
+					req.RequestURI,
+				)),
+			)
+		}
 		return
 	}
 	if parts[1] != "rpc" && parts[1] != "ws" {
