@@ -23,7 +23,7 @@ type Room interface {
 	FindPlayer(string) (*Player, bool)
 	Play(string)
 	AnswerQuestion(string, types.Coordinate) (int, error)
-	HasActiveQuestion() bool
+	HasActiveQuestion(string) bool
 	Question() string
 	CanBeAdvanced() bool
 	AdvanceToNextQuestion()
@@ -306,8 +306,12 @@ func (r *roomImpl) AnswerQuestion(playerKey string, guess types.Coordinate) (int
 	return question.points[playerKey], err
 }
 
-func (r *roomImpl) HasActiveQuestion() bool {
-	return r.currentQuestion != nil
+func (r *roomImpl) HasActiveQuestion(playerKey string) bool {
+	if r.currentQuestion == nil {
+		return false
+	}
+	_, ok := r.currentQuestion.points[playerKey]
+	return !ok
 }
 
 func (r *roomImpl) Question() string {

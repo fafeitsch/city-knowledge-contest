@@ -43,6 +43,9 @@ type createRoomResponse struct {
 
 func (r *roomContainer) isValidTileRequest(req *http.Request) bool {
 	parts := strings.Split(req.RequestURI, "/")
+	if len(parts) < 6 {
+		return false
+	}
 	roomKey := parts[2]
 	z, errZ := strconv.Atoi(parts[3])
 	x, errX := strconv.Atoi(parts[4])
@@ -228,8 +231,8 @@ func (r *roomContainer) answerQuestion(message json.RawMessage) (*rpcRequestCont
 	if err != nil {
 		return &rpcRequestContext{release: unlockRoom(room)}, err
 	}
-	if !room.HasActiveQuestion() {
-		return &rpcRequestContext{release: unlockRoom(room)}, fmt.Errorf("question cannot be answered because there is no active question")
+	if !room.HasActiveQuestion(request.PlayerKey) {
+		return &rpcRequestContext{release: unlockRoom(room)}, fmt.Errorf("question cannot be answered because there is no active question or player has already answered it")
 	}
 	return &rpcRequestContext{
 		process: func() (any, error) {

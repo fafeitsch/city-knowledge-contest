@@ -43,7 +43,7 @@ import PartyConfetti from '../../components/PartyConfetti.svelte';
 import Button from '../../components/Button.svelte';
 import Leaflet from './Leaflet.svelte';
 import Players from '../../components/Players.svelte';
-import { map, merge, of, Subject, switchMap, tap } from 'rxjs';
+import { map, merge, of, Subject, switchMap, tap, zip } from 'rxjs';
 import {
   subscribeToCountdown,
   subscribeToQuestion,
@@ -96,7 +96,7 @@ function onAnswerQuestion(event: CustomEvent) {
   {#if $countdown}
     <div class="overlay">{$countdown}</div>
   {/if}
-  <Leaflet on:answerQuestion="{onAnswerQuestion}" />
+  <Leaflet on:mapClicked="{onAnswerQuestion}" disabled="{$lastResult !== undefined}" />
   {#if $question && !$gameFinished && $lastResult === undefined}
     <div class="container">
       <div class="card">Suche den Ort {$question}</div>

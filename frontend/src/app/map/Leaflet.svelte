@@ -1,11 +1,13 @@
 <script lang="ts">
-import L, { Icon, latLng, type LatLng, type Map, Marker, TileLayer } from 'leaflet';
+import L, { Icon, latLng, type LatLng, LeafletMouseEvent, type Map, Marker, TileLayer } from 'leaflet';
 import { delay, filter, map, merge, of, Subject, switchMap, take, takeUntil, tap } from 'rxjs';
 import { createEventDispatcher, onDestroy, onMount } from 'svelte';
 import { environment } from '../../environment';
 import img from '../../assets/images/pin.png';
 import { subscribeToQuestionFinished, subscribeToRoomUpdated, subscribeToSuccessfullyJoined } from '../../sockets';
 import store from '../../store';
+
+export let disabled = false;
 
 let mapContainer: Map;
 
@@ -94,9 +96,16 @@ function createMap() {
       leafletMap.setMaxZoom(config.maxZoom);
       leafletMap.flyTo({ lat: config.center[0], lng: config.center[1] }, config.maxZoom / 2 + config.minZoom / 2);
     });
-  leafletMap.addEventListener('click', (e) => dispatch('answerQuestion', [e.latlng.lat, e.latlng.lng]));
+  leafletMap.addEventListener('click', (e) => onMapClicked(e));
 
   return leafletMap;
+}
+
+function onMapClicked(event: LeafletMouseEvent) {
+  if (disabled) {
+    return;
+  }
+  dispatch('mapClicked', [event.latlng.lat, event.latlng.lng]);
 }
 </script>
 

@@ -62,7 +62,7 @@ func (r *roomContainer) upgradeToWebSocket(writer http.ResponseWriter, request *
 		},
 	)
 	room.Unlock()
-	if room.HasActiveQuestion() {
+	if room.HasActiveQuestion(player.Key) {
 		room.Lock()
 		notifier.NotifyQuestion(room.Question())
 		room.Unlock()
