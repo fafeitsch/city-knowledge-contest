@@ -1,15 +1,32 @@
+<style lang="scss">
+.player-list {
+  z-index: 1000;
+  margin: 32px;
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 300px;
+  max-height: 400px;
+  background-color: white;
+  border-radius: 16px;
+  padding: 16px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+</style>
+
 <script lang="ts">
-import { filter, map, merge, Observable, startWith, Subject, switchMap, tap } from 'rxjs';
+import { filter, map, merge, Observable } from 'rxjs';
 import AvailableStreetLists from './AvailableStreetLists.svelte';
 import Button from '../../components/Button.svelte';
 import store from '../../store';
-import rpc, { type RoomConfiguration, type RoomConfigurationResult } from '../../rpc';
+import rpc, { type RoomConfiguration } from '../../rpc';
 import CopyIcon from './CopyIcon.svelte';
 import Players from '../../components/Players.svelte';
 import CoverImage from '../../components/CoverImage.svelte';
 import Card from '../../components/Card.svelte';
 import Input from '../../components/Input.svelte';
-import { subscribeToJoined, subscribeToRoomUpdated } from '../../sockets';
+import { type RoomConfigurationResult, subscribeToJoined, subscribeToRoomUpdated } from '../../sockets';
 
 const decimalRegex = /^\d+$/;
 let room = store.get.room$;
@@ -63,8 +80,9 @@ function startGame() {
 }
 </script>
 
-<Players playerKey="{$room.playerKey}" players="{$players}" absolutePosition="{true}" />
-
+<div class="player-list">
+  <Players playerKey="{$room.playerKey}" players="{$players}" />
+</div>
 <CoverImage>
   <h1>Gleich geht's los…</h1>
   <Card>

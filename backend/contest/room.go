@@ -24,7 +24,7 @@ type Room interface {
 	Play(string)
 	AnswerQuestion(string, types.Coordinate) (int, error)
 	HasActiveQuestion(string) bool
-	Question() string
+	Question() (string, int)
 	CanBeAdvanced() bool
 	AdvanceToNextQuestion()
 	Key() string
@@ -63,6 +63,7 @@ type Question struct {
 	allPlayersAnswered chan bool
 	begin              time.Time
 	duration           time.Duration
+	number             int
 }
 
 func (q *Question) waitForPlayers(countdown func(int)) {
@@ -240,16 +241,17 @@ func (r *roomImpl) playQuestion(round int) error {
 		allPlayersAnswered: make(chan bool),
 		begin:              time.Now(),
 		duration:           r.options.MaxAnswerTime,
+		number:             round,
 	}
 	r.Unlock()
 	r.sendCountdowns(
-		3, func(player Player) func(int) {
+		3, func(player Player) func(int, int) {
 			return player.NotifyQuestionCountdown
-		},
+		}, round,
 	)
 	r.notifyPlayers(
 		func(player Player) {
-			player.NotifyQuestion(randomStreet.Name)
+			player.NotifyQuestion(randomStreet.Name, round)
 		},
 	)
 	r.currentQuestion.waitForPlayers(
@@ -265,10 +267,11 @@ func (r *roomImpl) playQuestion(round int) error {
 		r.points[key] = r.points[key] + value
 	}
 	result := QuestionResult{
-		Question:   randomStreet.Name,
-		Solution:   *randomStreet.Coordinate,
-		PointDelta: r.currentQuestion.points,
-		Points:     r.points,
+		Question:       randomStreet.Name,
+		Solution:       *randomStreet.Coordinate,
+		PointDelta:     r.currentQuestion.points,
+		Points:         r.points,
+		QuestionNumber: round,
 	}
 	r.notifyPlayers(
 		func(player Player) {
@@ -314,8 +317,8 @@ func (r *roomImpl) HasActiveQuestion(playerKey string) bool {
 	return !ok
 }
 
-func (r *roomImpl) Question() string {
-	return r.currentQuestion.Street.Name
+func (r *roomImpl) Question() (string, int) {
+	return r.currentQuestion.Street.Name, r.currentQuestion.number
 }
 
 func (r *roomImpl) CanBeAdvanced() bool {
@@ -326,11 +329,13 @@ func (r *roomImpl) AdvanceToNextQuestion() {
 	r.advanceGame <- true
 }
 
-func (r *roomImpl) sendCountdowns(amount int, consumer func(Player) func(int)) {
+func (r *roomImpl) sendCountdowns(
+	amount int, consumer func(Player) func(int, int), numberOfQuestion int,
+) {
 	for i := 0; i < amount; i++ {
 		r.notifyPlayers(
 			func(player Player) {
-				consumer(player)(amount - i - 1)
+				consumer(player)(amount-i-1, numberOfQuestion)
 			},
 		)
 		time.Sleep(time.Second)
@@ -357,10 +362,11 @@ type Player struct {
 }
 
 type QuestionResult struct {
-	Question   string
-	Solution   types.Coordinate
-	PointDelta map[string]int
-	Points     map[string]int
+	Question       string           `json:"question"`
+	Solution       types.Coordinate `json:"solution"`
+	PointDelta     map[string]int   `json:"pointDelta"`
+	Points         map[string]int   `json:"points"`
+	QuestionNumber int              `json:"questionNumber"`
 }
 
 type Notifier interface {
@@ -368,8 +374,8 @@ type Notifier interface {
 	NotifyRoomUpdated(RoomOptions, string)
 	NotifyGameStarted(playerKey string)
 	NotifyPlayerAnswered(string, int)
-	NotifyQuestionCountdown(int)
-	NotifyQuestion(string)
+	NotifyQuestionCountdown(int, int)
+	NotifyQuestion(string, int)
 	NotifyAnswerTimeCountdown(int)
 	NotifyQuestionResults(result QuestionResult)
 	NotifyGameEnded(reason string, result map[string]int)

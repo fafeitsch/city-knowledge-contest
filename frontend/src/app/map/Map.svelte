@@ -1,6 +1,21 @@
 <style lang="scss">
 @import '../../styles/variables';
 
+.game-panel {
+  z-index: 1000;
+  margin: 32px;
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 300px;
+  max-height: 400px;
+  background-color: white;
+  border-radius: 16px;
+  padding: 8px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
 .overlay {
   z-index: 10000;
   height: 100vh;
@@ -42,18 +57,10 @@ import store from '../../store';
 import PartyConfetti from '../../components/PartyConfetti.svelte';
 import Button from '../../components/Button.svelte';
 import Leaflet from './Leaflet.svelte';
-import Players from '../../components/Players.svelte';
 import { map, merge, of, Subject, switchMap, tap, zip } from 'rxjs';
-import {
-  subscribeToCountdown,
-  subscribeToQuestion,
-  subscribeToQuestionFinished,
-  subscribeToSocketTopic,
-  Topic,
-} from '../../sockets';
+import { subscribeToCountdown, subscribeToQuestion, subscribeToQuestionFinished } from '../../sockets';
 import rpc from '../../rpc';
-import { get } from 'svelte/store';
-import App from '../../App.svelte';
+import GamePanel from './GamePanel.svelte';
 
 let countdown = merge(
   subscribeToQuestion().pipe(map(() => undefined)),
@@ -78,8 +85,6 @@ let lastResult = merge(
   ),
   question.pipe(map(() => undefined)),
 );
-let players = store.get.players$;
-let room = store.get.room$;
 
 function advanceGame() {
   guess.next(undefined);
@@ -92,7 +97,9 @@ function onAnswerQuestion(event: CustomEvent) {
 </script>
 
 <div>
-  <Players playerKey="{$room.playerKey}" players="{$players}" absolutePosition="{true}" />
+  <div class="game-panel">
+    <GamePanel />
+  </div>
   {#if $countdown}
     <div class="overlay">{$countdown}</div>
   {/if}

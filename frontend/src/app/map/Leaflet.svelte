@@ -67,7 +67,6 @@ function createMap() {
     if (layer) {
       layer.removeFrom(leafletMap);
     }
-    console.log('setting up tile layer');
     layer = L.tileLayer(environment[import.meta.env.MODE].tileUrl.replace('roomKey', room.roomKey), {
       attribution: `&copy;<a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>`,
     }).addTo(leafletMap);

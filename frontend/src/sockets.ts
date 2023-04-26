@@ -45,12 +45,12 @@ export function initWebSocket() {
   });
 }
 
-export function subscribeToQuestion(): Observable<{ find: string }> {
-  return subscribeToSocketTopic<{ find: string }>(Topic.question);
+export function subscribeToQuestion(): Observable<{ find: string; questionNumber: number }> {
+  return subscribeToSocketTopic(Topic.question);
 }
 
-export function subscribeToCountdown(): Observable<{ followUps: number }> {
-  return subscribeToSocketTopic<{ followUps: number }>(Topic.questionCountdown);
+export function subscribeToCountdown(): Observable<{ followUps: number; questionNumber: number }> {
+  return subscribeToSocketTopic(Topic.questionCountdown);
 }
 
 export function subscribeToJoined(): Observable<{ options: RoomConfigurationResult }> {
@@ -83,6 +83,7 @@ export type GameResult = {
     lat: number;
     lon: number;
   };
+  questionNumber: number;
 };
 
 export function subscribeToQuestionFinished(): Observable<GameResult> {

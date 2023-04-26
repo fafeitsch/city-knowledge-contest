@@ -1,21 +1,6 @@
 <style lang="scss">
 @import '../styles/variables';
 
-.absolute-position {
-  z-index: 1000;
-  margin: 32px;
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 300px;
-  max-height: 400px;
-  background-color: white;
-  border-radius: 16px;
-  padding: 16px;
-  overflow-x: hidden;
-  overflow-y: auto;
-}
-
 .player {
   background-color: $blue-main;
   padding: 16px;
@@ -37,11 +22,10 @@ import { fly } from 'svelte/transition';
 import { flip } from 'svelte/animate';
 
 export let players: Player[] = [];
-export let absolutePosition = false;
 export let playerKey = '';
 </script>
 
-<div style="align-self: normal" class="d-flex flex-column gap-4 p-4" class:absolute-position="{absolutePosition}">
+<div style="align-self: normal" class="d-flex flex-column gap-4 p-4">
   {#each players as player (player.playerKey)}
     <div
       in:fly="{{ x: 200, duration: 1000 }}"
