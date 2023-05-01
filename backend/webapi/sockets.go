@@ -116,6 +116,11 @@ func (w *websocketNotifier) NotifyPlayerJoined(name string, key string) {
 	w.write(websocketMessage{Topic: "playerJoined", Payload: payload})
 }
 
+func (w *websocketNotifier) NotifyPlayerLeft(name string, key string) {
+	payload := map[string]string{"name": name, "playerKey": key}
+	w.write(websocketMessage{Topic: "playerLeft", Payload: payload})
+}
+
 func (w *websocketNotifier) NotifyRoomUpdated(options contest.RoomOptions, playerKey string) {
 	message := convertRoomOptions(options, playerKey)
 	w.write(

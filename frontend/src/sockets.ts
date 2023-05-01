@@ -7,6 +7,7 @@ export enum Topic {
   'roomUpdated' = 'roomUpdated',
   'question' = 'question',
   'successfullyJoined' = 'successfullyJoined',
+  'playerLeft' = 'playerLeft',
   'questionCountdown' = 'questionCountdown',
   'gameEnded' = 'gameEnded',
   'questionFinished' = 'questionFinished',
@@ -32,6 +33,9 @@ export function initWebSocket() {
       }
       if (data.topic === 'successfullyJoined') {
         store.set.players(data.payload.players);
+      } else if(data.topic === 'playerLeft') {
+        console.warn("On Message playerLeft", data);
+        store.set.removePlayer(data.payload);
       } else if (data.topic === 'playerJoined') {
         store.set.addPlayer(data.payload);
       } else if (data.topic === 'questionFinished') {
@@ -55,6 +59,10 @@ export function subscribeToCountdown(): Observable<{ followUps: number; question
 
 export function subscribeToJoined(): Observable<{ options: RoomConfigurationResult }> {
   return subscribeToSocketTopic<{ options: RoomConfigurationResult }>(Topic.successfullyJoined);
+}
+
+export function subscribeToPlayerLeft(): Observable<{ options: RoomConfigurationResult }> {
+  return subscribeToSocketTopic(Topic.playerLeft);
 }
 
 export function subscribeToRoomUpdated(): Observable<RoomConfigurationResult> {

@@ -41,6 +41,19 @@
   width: 100vw;
 }
 
+.leave-button {
+  z-index: 999;
+  position: absolute;
+  top: 0;
+  left: 32px;
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 50px;
+  width: 200px;
+}
+
 .card {
   background-color: white;
   border-radius: 16px;
@@ -58,7 +71,7 @@ import PartyConfetti from '../../components/PartyConfetti.svelte';
 import Button from '../../components/Button.svelte';
 import Leaflet from './Leaflet.svelte';
 import { map, merge, of, Subject, switchMap, tap, zip } from 'rxjs';
-import { subscribeToCountdown, subscribeToQuestion, subscribeToQuestionFinished } from '../../sockets';
+import { subscribeToCountdown, subscribeToQuestion, subscribeToQuestionFinished, subscribeToPlayerLeft } from '../../sockets';
 import rpc from '../../rpc';
 import GamePanel from './GamePanel.svelte';
 
@@ -72,6 +85,7 @@ let gameFinished = merge(
   question.pipe(map(() => undefined)),
   subscribeToQuestionFinished().pipe(map((data) => (data ? 'questionFinished' : undefined))),
 );
+subscribeToPlayerLeft();
 
 let guess = new Subject<[number, number] | undefined>();
 let lastResult = merge(
@@ -91,6 +105,15 @@ function advanceGame() {
   rpc.advanceRoom().subscribe();
 }
 
+function leaveGame() {
+  rpc.leaveGame().subscribe((data) => {
+    console.log('leave game');
+    window.location = window.location.protocol + '//' + window.location.host;
+    // TODO this seems to cause an uncaught typeError: payload is undefined
+    store.set.resetGame();
+  });
+}
+
 function onAnswerQuestion(event: CustomEvent) {
   guess.next(event.detail);
 }
@@ -104,6 +127,11 @@ function onAnswerQuestion(event: CustomEvent) {
     <div class="overlay">{$countdown}</div>
   {/if}
   <Leaflet on:mapClicked="{onAnswerQuestion}" disabled="{$lastResult !== undefined}" />
+  {#if !$gameFinished}
+  <div class="leave-button">
+    <Button on:click="{leaveGame}" title="Raum verlassen"/>
+  </div>
+  {/if}
   {#if $question && !$gameFinished && $lastResult === undefined}
     <div class="container">
       <div class="card">Suche den Ort {$question}</div>

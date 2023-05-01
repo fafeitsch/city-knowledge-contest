@@ -28,6 +28,7 @@ func New(options Options) *RpcServer {
 		"updateRoom":              roomContainer.updateRoom,
 		"joinRoom":                roomContainer.joinRoom,
 		"startGame":               roomContainer.startGame,
+		"leaveGame":               roomContainer.leaveGame,
 		"answerQuestion":          roomContainer.answerQuestion,
 		"advanceGame":             roomContainer.advanceGame,
 		"getAvailableStreetLists": listStreetListFiles,

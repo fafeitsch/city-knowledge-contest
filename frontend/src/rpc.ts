@@ -98,6 +98,20 @@ const rpc = {
       name: username,
     }).pipe(map((data) => ({ ...data, roomKey })));
   },
+  leaveGame(): Observable<void> {
+    return store.get.room$.pipe(
+      take(1),
+      switchMap((room) =>
+        doRpc<void>('leaveGame', {
+          ...room,
+        }),
+      ),
+      catchError((err) => {
+        console.error(err);
+        return EMPTY;
+      }),
+    );
+  },
   getStreetLists(): Observable<StreetList[]> {
     return doRpc<StreetList[]>('getAvailableStreetLists', {});
   },

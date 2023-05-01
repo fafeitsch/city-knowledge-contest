@@ -50,6 +50,13 @@ const store = {
         players: newPlayers,
       });
     },
+    removePlayer(removedPlayer: Player) {
+      const newPlayers: Player[] = state$.value.players.filter(player => player.playerKey !== removedPlayer.playerKey);
+      state$.next({
+        ...state$.value,
+        players: newPlayers,
+      });
+    },
     updatePlayerRanking(points: Record<string, number | undefined>) {
       const newPlayers = state$.value.players
         .map((player) => ({
