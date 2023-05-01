@@ -58,9 +58,10 @@ import PartyConfetti from '../../components/PartyConfetti.svelte';
 import Button from '../../components/Button.svelte';
 import Leaflet from './Leaflet.svelte';
 import { map, merge, of, Subject, switchMap, tap, zip } from 'rxjs';
-import { subscribeToCountdown, subscribeToQuestion, subscribeToQuestionFinished } from '../../sockets';
+import { subscribeToCountdown, subscribeToQuestion, subscribeToQuestionFinished, subscribeToPlayerLeft } from '../../sockets';
 import rpc from '../../rpc';
 import GamePanel from './GamePanel.svelte';
+import LeaveButton from '../../components/LeaveButton.svelte';
 
 let countdown = merge(
   subscribeToQuestion().pipe(map(() => undefined)),
@@ -72,6 +73,7 @@ let gameFinished = merge(
   question.pipe(map(() => undefined)),
   subscribeToQuestionFinished().pipe(map((data) => (data ? 'questionFinished' : undefined))),
 );
+subscribeToPlayerLeft();
 
 let guess = new Subject<[number, number] | undefined>();
 let lastResult = merge(
@@ -104,6 +106,9 @@ function onAnswerQuestion(event: CustomEvent) {
     <div class="overlay">{$countdown}</div>
   {/if}
   <Leaflet on:mapClicked="{onAnswerQuestion}" disabled="{$lastResult !== undefined}" />
+  {#if !$gameFinished}
+    <LeaveButton/>
+  {/if}
   {#if $question && !$gameFinished && $lastResult === undefined}
     <div class="container">
       <div class="card">Suche den Ort {$question}</div>

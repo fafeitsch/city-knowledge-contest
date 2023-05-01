@@ -177,6 +177,28 @@ func (r *roomContainer) joinRoom(message json.RawMessage) (*rpcRequestContext, e
 	}, nil
 }
 
+type leaveRequest struct {
+	PlayerKey    string `json:"playerKey"`
+	PlayerSecret string `json:"playerSecret"`
+	RoomKey      string `json:"roomKey"`
+}
+
+func (r *roomContainer) leaveGame(message json.RawMessage) (*rpcRequestContext, error) {
+	request := parseMessage[startGameRequest](message)
+	room, err := r.validateRoomAndPlayer(request.RoomKey, request.PlayerKey, request.PlayerSecret)
+	if err != nil {
+		return &rpcRequestContext{release: unlockRoom(room)}, err
+	}
+	return &rpcRequestContext{
+		process: func() (any, error) {
+			player := room.Leave(request.PlayerKey)
+			log.Printf("Player \"%s\" (\"%s\") left room \"%s\".", player.Name, player.Key, request.RoomKey)
+			return map[string]any{}, nil
+		},
+		release: unlockRoom(room),
+	}, nil
+}
+
 type startGameRequest struct {
 	PlayerKey    string `json:"playerKey"`
 	PlayerSecret string `json:"playerSecret"`

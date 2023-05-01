@@ -20,6 +20,7 @@ type Room interface {
 	ConfigErrors() []string
 	SetOptions(RoomOptions, string)
 	Join(string) Player
+	Leave(string) Player
 	FindPlayer(string) (*Player, bool)
 	Play(string)
 	AnswerQuestion(string, types.Coordinate) (int, error)
@@ -167,6 +168,20 @@ func (r *roomImpl) Join(name string) Player {
 	)
 	r.players[player.Key] = &player
 	return player
+}
+
+func (r *roomImpl) Leave(playerKey string) Player {
+	player := r.players[playerKey]
+	r.notifyPlayers(
+		func(p Player) {
+			p.NotifyPlayerLeft(player.Name, player.Key)
+		},
+	)
+	delete(r.players, playerKey)
+	if len(r.players) == 0 {
+		r.finished = true
+	}
+	return *player
 }
 
 func (r *roomImpl) FindPlayer(key string) (*Player, bool) {
@@ -371,6 +386,7 @@ type QuestionResult struct {
 
 type Notifier interface {
 	NotifyPlayerJoined(string, string)
+	NotifyPlayerLeft(string, string)
 	NotifyRoomUpdated(RoomOptions, string)
 	NotifyGameStarted(playerKey string)
 	NotifyPlayerAnswered(string, int)
