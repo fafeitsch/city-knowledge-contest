@@ -178,6 +178,9 @@ func (r *roomImpl) Leave(playerKey string) Player {
 		},
 	)
 	delete(r.players, playerKey)
+	if len(r.players) == 0 {
+		r.finished = true
+	}
 	return *player
 }
 
