@@ -178,8 +178,7 @@ func (r *roomImpl) Leave(playerKey string) Player {
 		},
 	)
 	delete(r.players, playerKey)
-	// TODO cant return *Player why?
-	return Player{Name: player.Name, Key: player.Key, Secret: player.Secret}
+	return *player
 }
 
 func (r *roomImpl) FindPlayer(key string) (*Player, bool) {
