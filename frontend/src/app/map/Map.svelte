@@ -107,9 +107,7 @@ function advanceGame() {
 
 function leaveGame() {
   rpc.leaveGame().subscribe((data) => {
-    console.log('leave game');
     window.location = window.location.protocol + '//' + window.location.host;
-    // TODO this seems to cause an uncaught typeError: payload is undefined
     store.set.resetGame();
   });
 }
