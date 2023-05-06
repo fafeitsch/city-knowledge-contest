@@ -63,7 +63,7 @@ onDestroy(() => {
 function createMap() {
   const leafletMap = L.map('mapContainer').setView(latLng(50, 10), 5);
   let layer: TileLayer | undefined = undefined;
-  store.get.room$.pipe(takeUntil(destroy$)).subscribe((room) => {
+  store.get.room$.pipe(takeUntil(destroy$), filter(room => !!room)).subscribe((room) => {
     if (layer) {
       layer.removeFrom(leafletMap);
     }
@@ -76,6 +76,7 @@ function createMap() {
       switchMap((data) => {
         if (!data) {
           return subscribeToSuccessfullyJoined().pipe(
+            filter(payload => !!payload),
             map((payload) => payload.options),
             take(1),
           );
