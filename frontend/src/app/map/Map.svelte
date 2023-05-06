@@ -41,19 +41,6 @@
   width: 100vw;
 }
 
-.leave-button {
-  z-index: 999;
-  position: absolute;
-  top: 0;
-  left: 32px;
-  padding: 16px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 50px;
-  width: 200px;
-}
-
 .card {
   background-color: white;
   border-radius: 16px;
@@ -74,6 +61,7 @@ import { map, merge, of, Subject, switchMap, tap, zip } from 'rxjs';
 import { subscribeToCountdown, subscribeToQuestion, subscribeToQuestionFinished, subscribeToPlayerLeft } from '../../sockets';
 import rpc from '../../rpc';
 import GamePanel from './GamePanel.svelte';
+import LeaveButton from '../../components/LeaveButton.svelte';
 
 let countdown = merge(
   subscribeToQuestion().pipe(map(() => undefined)),
@@ -105,13 +93,6 @@ function advanceGame() {
   rpc.advanceRoom().subscribe();
 }
 
-function leaveGame() {
-  rpc.leaveGame().subscribe((data) => {
-    window.location = window.location.protocol + '//' + window.location.host;
-    store.set.resetGame();
-  });
-}
-
 function onAnswerQuestion(event: CustomEvent) {
   guess.next(event.detail);
 }
@@ -126,9 +107,7 @@ function onAnswerQuestion(event: CustomEvent) {
   {/if}
   <Leaflet on:mapClicked="{onAnswerQuestion}" disabled="{$lastResult !== undefined}" />
   {#if !$gameFinished}
-  <div class="leave-button">
-    <Button on:click="{leaveGame}" title="Raum verlassen"/>
-  </div>
+    <LeaveButton/>
   {/if}
   {#if $question && !$gameFinished && $lastResult === undefined}
     <div class="container">

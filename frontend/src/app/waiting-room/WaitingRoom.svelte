@@ -27,6 +27,7 @@ import CoverImage from '../../components/CoverImage.svelte';
 import Card from '../../components/Card.svelte';
 import Input from '../../components/Input.svelte';
 import { type RoomConfigurationResult, subscribeToJoined, subscribeToRoomUpdated } from '../../sockets';
+import LeaveButton from '../../components/LeaveButton.svelte';
 
 const decimalRegex = /^\d+$/;
 let room = store.get.room$;
@@ -83,6 +84,7 @@ function startGame() {
 <div class="player-list">
   <Players playerKey="{$room.playerKey}" players="{$players}" />
 </div>
+<LeaveButton/>
 <CoverImage>
   <h1>Gleich geht's los…</h1>
   <Card>
