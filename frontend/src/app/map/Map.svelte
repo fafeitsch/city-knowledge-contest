@@ -58,7 +58,12 @@ import PartyConfetti from '../../components/PartyConfetti.svelte';
 import Button from '../../components/Button.svelte';
 import Leaflet from './Leaflet.svelte';
 import { map, merge, of, Subject, switchMap, tap, zip } from 'rxjs';
-import { subscribeToCountdown, subscribeToQuestion, subscribeToQuestionFinished, subscribeToPlayerLeft } from '../../sockets';
+import {
+  subscribeToCountdown,
+  subscribeToQuestion,
+  subscribeToQuestionFinished,
+  subscribeToPlayerLeft,
+} from '../../sockets';
 import rpc from '../../rpc';
 import GamePanel from './GamePanel.svelte';
 import LeaveButton from '../../components/LeaveButton.svelte';
@@ -106,9 +111,7 @@ function onAnswerQuestion(event: CustomEvent) {
     <div class="overlay">{$countdown}</div>
   {/if}
   <Leaflet on:mapClicked="{onAnswerQuestion}" disabled="{$lastResult !== undefined}" />
-  {#if !$gameFinished}
-    <LeaveButton/>
-  {/if}
+  <LeaveButton />
   {#if $question && !$gameFinished && $lastResult === undefined}
     <div class="container">
       <div class="card">Suche den Ort {$question}</div>
