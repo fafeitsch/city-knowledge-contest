@@ -120,6 +120,7 @@ const rpc = {
     dataProtection: string;
     tileServer: string;
     nominatimServer: string;
+    version: string;
   }> {
     return doRpc('getLegalInformation', {});
   },

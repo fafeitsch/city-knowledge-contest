@@ -32,9 +32,7 @@ func New(options Options) *RpcServer {
 		"answerQuestion":          roomContainer.answerQuestion,
 		"advanceGame":             roomContainer.advanceGame,
 		"getAvailableStreetLists": listStreetListFiles,
-		"getLegalInformation": getLegalInformation(
-			options.ImprintFile, options.DataProtectionFile, options.TileServer,
-		),
+		"getLegalInformation":     getLegalInformation(options),
 	}
 	return &RpcServer{
 		methods: methods,
@@ -46,8 +44,8 @@ func New(options Options) *RpcServer {
 	}
 }
 
-func getLegalInformation(imprintFile string, dataProtectionFile string, tileServer string) rpcHandler {
-	imprint, err := ioutil.ReadFile(imprintFile)
+func getLegalInformation(options Options) rpcHandler {
+	imprint, err := ioutil.ReadFile(options.ImprintFile)
 	imprintText := ""
 	if err != nil {
 		log.Printf("could not read imprint file: %v", err)
@@ -55,7 +53,7 @@ func getLegalInformation(imprintFile string, dataProtectionFile string, tileServ
 	} else {
 		imprintText = string(imprint)
 	}
-	dataProtection, err := ioutil.ReadFile(dataProtectionFile)
+	dataProtection, err := ioutil.ReadFile(options.DataProtectionFile)
 	dataProtectionText := ""
 	if err != nil {
 		log.Printf("could not read data protection file: %v", err)
@@ -63,8 +61,8 @@ func getLegalInformation(imprintFile string, dataProtectionFile string, tileServ
 	} else {
 		dataProtectionText = string(dataProtection)
 	}
-	tileServerUrl, err := url.Parse(tileServer)
-	tileServerBase := tileServer
+	tileServerUrl, err := url.Parse(options.TileServer)
+	tileServerBase := options.TileServer
 	if err == nil {
 		tileServerBase = tileServerUrl.Host
 	}
@@ -81,6 +79,7 @@ func getLegalInformation(imprintFile string, dataProtectionFile string, tileServ
 					"dataProtection":  dataProtectionText,
 					"tileServer":      tileServerBase,
 					"nominatimServer": nominatimServerBase,
+					"version":         options.Version,
 				}, nil
 			},
 		}, nil

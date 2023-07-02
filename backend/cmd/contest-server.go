@@ -2,15 +2,14 @@ package main
 
 import (
 	"fmt"
-	"log"
-	"net/http"
-	"os"
-	"strconv"
-
 	"github.com/fafeitsch/city-knowledge-contest/backend/geodata"
 	"github.com/fafeitsch/city-knowledge-contest/backend/keygen"
 	"github.com/fafeitsch/city-knowledge-contest/backend/webapi"
 	"github.com/urfave/cli/v2"
+	"log"
+	"net/http"
+	"os"
+	"strconv"
 )
 
 func rangeValidation(min int, max int, name string) func(*cli.Context, int) error {
@@ -23,6 +22,8 @@ func rangeValidation(min int, max int, name string) func(*cli.Context, int) erro
 }
 
 const keyLengthMessage = "Must be between 2 and 255. Lower values improve debugging but increase risk of key collisions (which the app does not handle well)."
+
+var version = "0.0.0-devbuild"
 
 var port int
 var portFlag = &cli.IntFlag{
@@ -132,11 +133,12 @@ func main() {
 					UseTileCache:       useTileCache,
 					DataProtectionFile: dataProtectionFile,
 					ImprintFile:        imprintFile,
+					Version:            version,
 				},
 			)
 			keygen.SetPlayerKeyLength(playerKeyLength)
 			keygen.SetRoomKeyLength(roomKeyLength)
-			log.Printf("Starting server on port %d", port)
+			log.Printf("Starting server version %s on port %d", version, port)
 			log.Printf("CORS mode enabled: %v", allowCors)
 			log.Printf("Room key length set to %d", roomKeyLength)
 			log.Printf("Player key length set to %d", playerKeyLength)

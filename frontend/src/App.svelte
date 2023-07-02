@@ -19,8 +19,11 @@ button {
   font-weight: bold;
 }
 
-a {
+.smaller {
   font-size: smaller;
+}
+
+a {
   font-weight: 600;
   text-decoration: underline;
 }
@@ -124,15 +127,22 @@ function showOsmServicesDialog() {
 <footer>
   <div class="p-3 d-flex flex-column align-items-center gap-3">
     <div>
+      <span class="smaller">{$legalInfo ? $legalInfo.version : ''}</span>
       <button on:click="{showImprintDialog}">Impressum</button>
       |
       <button on:click="{showDataProtectionDialog}">Datenschutz</button> |
       <button on:click="{showOsmServicesDialog}">OSM-Services</button>
       |
-      <a href="https://github.com/fafeitsch/city-knowledge-contest" target="_blank" rel="noreferrer">Projekt auf Github</a>
+      <a class="smaller" href="https://github.com/fafeitsch/city-knowledge-contest" target="_blank" rel="noreferrer"
+        >Projekt auf Github</a
+      >
       |
-      <a href="https://www.flaticon.com/free-icons/location-pin" title="location pin icons" target="_blank" rel="noreferrer"
-        >Location pin icons created by Smashicons - Flaticon</a
+      <a
+        class="smaller"
+        href="https://www.flaticon.com/free-icons/location-pin"
+        title="location pin icons"
+        target="_blank"
+        rel="noreferrer">Location pin icons created by Smashicons - Flaticon</a
       >
     </div>
   </div>

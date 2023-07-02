@@ -1,11 +1,19 @@
 <style lang="scss">
 @import '../styles/variables';
 
-.legal {
-  z-index: 1000;
+.backdrop {
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
   position: absolute;
-  top: auto;
-  left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.legal {
   width: 500px;
   overflow: auto;
   background-color: white;
@@ -38,7 +46,9 @@ function closeLegal() {
 }
 </script>
 
-<div class="legal">
-  {@html info}
-  <Button title="Schließen" on:click="{closeLegal}" disabled="{false}" />
+<div class="backdrop" on:click="{(e) => e.stopPropagation()}">
+  <div class="legal">
+    {@html info}
+    <Button title="Schließen" on:click="{closeLegal}" disabled="{false}" />
+  </div>
 </div>

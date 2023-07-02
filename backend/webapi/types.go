@@ -29,4 +29,5 @@ type Options struct {
 	UseTileCache       bool
 	ImprintFile        string
 	DataProtectionFile string
+	Version            string
 }

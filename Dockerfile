@@ -2,7 +2,8 @@ FROM golang:1.18-alpine AS BUILD_BACKEND
 WORKDIR /app
 COPY ./backend .
 RUN go mod download
-RUN go build -o contest-server ./cmd/contest-server.go
+ARG VERSION="unversioned"
+RUN go build -ldflags "-X main.version=$VERSION" -o contest-server ./cmd/contest-server.go
 
 FROM node:18-alpine AS BUILD_FRONTEND
 WORKDIR app

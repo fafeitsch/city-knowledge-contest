@@ -56,10 +56,10 @@ In order to play, you need meet three non-technical requirements:
 The easiest way to start the server quickly is to use the `Dockerfile` to build
 an image:
 
-`docker build --rm --no-cache -t  city-contest:alpha .`
+`build.sh`
 and then start the server:
 
-`docker run -p 8081:23123 -it -v /path/to/streetlists:/streetlists city-contest:alpha`
+`docker run -p 8081:23123 -it -v /path/to/streetlists:/streetlists city-contest`
 
 As shown above, you have to specify the `streetlists` directory. You can pass the flag `--help` to the
 docker container, which will print the list of available options (e.g. how to set your own Nominatim and OSM tile servers).
