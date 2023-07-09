@@ -241,7 +241,7 @@ func (r *roomImpl) playQuestion(round int) error {
 		randomStreet, err = r.options.StreetList.GetRandomStreet(r.random)
 		tries = tries + 1
 	}
-	if tries == 10 && randomStreet.Coordinate == nil {
+	if randomStreet.Coordinate == nil {
 		r.notifyPlayers(
 			func(player Player) {
 				player.NotifyGameEnded("repeatedly failed to get random street", r.points)
