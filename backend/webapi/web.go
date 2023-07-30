@@ -14,14 +14,16 @@ import (
 )
 
 type RpcServer struct {
-	methods       map[string]rpcHandler
-	options       Options
-	upgrader      func(w http.ResponseWriter, req *http.Request) error
-	roomContainer roomContainer
+	methods            map[string]rpcHandler
+	options            Options
+	playerUpgrader     func(w http.ResponseWriter, req *http.Request) error
+	statisticsUpgrader func(w http.ResponseWriter, req *http.Request) error
+	roomContainer      roomContainer
 }
 
 func New(options Options) *RpcServer {
-	roomContainer := roomContainer{openRooms: make(map[string]contest.Room)}
+	statisticsContainer := statisticsContainer{subscribers: make([]websocketNotifier, 0), secretUrlKey: "abc"}
+	roomContainer := roomContainer{openRooms: make(map[string]contest.Room), statistics: &statisticsContainer}
 	roomContainer.startRoomCleaner()
 	methods := map[string]rpcHandler{
 		"createRoom":              roomContainer.createRoom,
@@ -37,8 +39,11 @@ func New(options Options) *RpcServer {
 	return &RpcServer{
 		methods: methods,
 		options: options,
-		upgrader: func(resp http.ResponseWriter, req *http.Request) error {
+		playerUpgrader: func(resp http.ResponseWriter, req *http.Request) error {
 			return roomContainer.upgradeToWebSocket(resp, req, options)
+		},
+		statisticsUpgrader: func(resp http.ResponseWriter, req *http.Request) error {
+			return statisticsContainer.createSocket(resp, req, options)
 		},
 		roomContainer: roomContainer,
 	}
@@ -102,7 +107,7 @@ func (r *RpcServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		}
 		return
 	}
-	if parts[1] != "rpc" && parts[1] != "ws" {
+	if parts[1] != "rpc" && parts[1] != "ws" && parts[1] != "wsstatistics" {
 		if parts[1] == "room" {
 			req.URL.Path = "/"
 		}
@@ -117,7 +122,12 @@ func (r *RpcServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		return
 	}
 	if req.Header.Get("Upgrade") == "websocket" {
-		err := r.upgrader(resp, req)
+		var err error
+		if parts[1] == "ws" {
+			err = r.playerUpgrader(resp, req)
+		} else if parts[1] == "wsstatistics" {
+			err = r.statisticsUpgrader(resp, req)
+		}
 		if err != nil {
 			fmt.Printf("%v", err)
 			resp.WriteHeader(http.StatusInternalServerError)

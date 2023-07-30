@@ -86,3 +86,7 @@ Content-Type: application/json
 
 WEBSOCKET ws://127.0.0.1:23123/ws/{{roomKey}}/{{playerKey}}
 ckc-player-secret: {{playerSecret}}
+
+### Listen on statistic events
+
+WEBSOCKET ws://127.0.0.1:23123/wsstatistics/abc

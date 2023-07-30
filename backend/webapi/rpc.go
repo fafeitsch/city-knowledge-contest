@@ -18,7 +18,8 @@ import (
 
 type roomContainer struct {
 	sync.RWMutex
-	openRooms map[string]contest.Room
+	openRooms  map[string]contest.Room
+	statistics *statisticsContainer
 }
 
 type rpcHandler func(message json.RawMessage) (*rpcRequestContext, error)
@@ -91,6 +92,7 @@ func (r *roomContainer) createRoom(message json.RawMessage) (*rpcRequestContext,
 				NumberOfQuestions: room.Options().NumberOfQuestions,
 			}
 			log.Printf("Created room \"%s\" from player \"%s\" (\"%s\").", room.Key(), player.Secret, player.Name)
+			r.statistics.sendRoomCreated(room.Key())
 			return response, nil
 		},
 	}, nil
@@ -171,6 +173,7 @@ func (r *roomContainer) joinRoom(message json.RawMessage) (*rpcRequestContext, e
 				PlayerSecret: player.Secret,
 			}
 			log.Printf("Player \"%s\" (\"%s\") joined room \"%s\".", player.Secret, player.Name, room.Key())
+			r.statistics.sendRoomJoined(request.RoomKey)
 			return response, nil
 		},
 		release: unlockRoom(room),
@@ -184,7 +187,7 @@ type leaveRequest struct {
 }
 
 func (r *roomContainer) leaveGame(message json.RawMessage) (*rpcRequestContext, error) {
-	request := parseMessage[startGameRequest](message)
+	request := parseMessage[leaveRequest](message)
 	room, err := r.validateRoomAndPlayer(request.RoomKey, request.PlayerKey, request.PlayerSecret)
 	if err != nil {
 		return &rpcRequestContext{release: unlockRoom(room)}, err
