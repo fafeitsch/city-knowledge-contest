@@ -105,6 +105,13 @@ var dataProtectionFileFlag = &cli.StringFlag{
 	Usage:       "Path to the data protection file.",
 	Destination: &dataProtectionFile,
 }
+var enableStatisticsSocket bool
+var enableStatisticsSocketFlag = &cli.BoolFlag{
+	Name:        "enableStatistics",
+	Value:       false,
+	Usage:       "If true, the server offers a public (!) statistics socket under /wsstatistics",
+	Destination: &enableStatisticsSocket,
+}
 
 func main() {
 	app := cli.App{
@@ -122,6 +129,7 @@ func main() {
 			sslKeyFlag,
 			dataProtectionFileFlag,
 			imprintFileFlag,
+			enableStatisticsSocketFlag,
 		},
 		HideHelpCommand: true,
 		Action: func(context *cli.Context) error {
@@ -134,6 +142,7 @@ func main() {
 					DataProtectionFile: dataProtectionFile,
 					ImprintFile:        imprintFile,
 					Version:            version,
+					EnableStatistics:   enableStatisticsSocket,
 				},
 			)
 			keygen.SetPlayerKeyLength(playerKeyLength)
@@ -145,6 +154,7 @@ func main() {
 			log.Printf("Using Nominatim API backend at \"%s\"", geodata.NominatimServer)
 			log.Printf("Using Tile API backend at \"%s\"", tileServer)
 			log.Printf("Using Tile cache enabled: %v", useTileCache)
+			log.Printf("Statistics socket enabled: %v", enableStatisticsSocket)
 			log.Printf("Using data protection file at \"%s\"", dataProtectionFile)
 			log.Printf("Using imprint file at \"%s\"", imprintFile)
 			if sslKey != "" && sslCert != "" {

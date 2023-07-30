@@ -22,7 +22,10 @@ type RpcServer struct {
 }
 
 func New(options Options) *RpcServer {
-	statisticsContainer := statisticsContainer{subscribers: make([]websocketNotifier, 0), secretUrlKey: "abc"}
+	statisticsContainer := statisticsContainer{
+		subscribers: make([]websocketNotifier, 0),
+		roomKeys:    make(map[string]string),
+	}
 	roomContainer := roomContainer{openRooms: make(map[string]contest.Room), statistics: &statisticsContainer}
 	roomContainer.startRoomCleaner()
 	methods := map[string]rpcHandler{
@@ -126,6 +129,10 @@ func (r *RpcServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		if parts[1] == "ws" {
 			err = r.playerUpgrader(resp, req)
 		} else if parts[1] == "wsstatistics" {
+			if r.options.EnableStatistics == false {
+				resp.WriteHeader(http.StatusForbidden)
+				return
+			}
 			err = r.statisticsUpgrader(resp, req)
 		}
 		if err != nil {

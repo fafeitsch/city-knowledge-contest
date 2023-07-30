@@ -173,7 +173,7 @@ func (r *roomContainer) joinRoom(message json.RawMessage) (*rpcRequestContext, e
 				PlayerSecret: player.Secret,
 			}
 			log.Printf("Player \"%s\" (\"%s\") joined room \"%s\".", player.Secret, player.Name, room.Key())
-			r.statistics.sendRoomJoined(request.RoomKey)
+			r.statistics.sendPlayerJoined(request.RoomKey)
 			return response, nil
 		},
 		release: unlockRoom(room),
@@ -196,6 +196,7 @@ func (r *roomContainer) leaveGame(message json.RawMessage) (*rpcRequestContext, 
 		process: func() (any, error) {
 			player := room.Leave(request.PlayerKey)
 			log.Printf("Player \"%s\" (\"%s\") left room \"%s\".", player.Name, player.Key, request.RoomKey)
+			r.statistics.sendPlayerLeft(request.RoomKey)
 			return map[string]any{}, nil
 		},
 		release: unlockRoom(room),
@@ -223,6 +224,7 @@ func (r *roomContainer) startGame(message json.RawMessage) (*rpcRequestContext, 
 	return &rpcRequestContext{
 		process: func() (any, error) {
 			room.Play(request.PlayerKey)
+			r.statistics.sendGameStarted(request.RoomKey, room.Options())
 			return map[string]any{}, nil
 		},
 		release: unlockRoom(room),
@@ -270,6 +272,7 @@ func (r *roomContainer) answerQuestion(message json.RawMessage) (*rpcRequestCont
 			if err != nil {
 				return nil, fmt.Errorf("could not validate answer: %v", err)
 			}
+			r.statistics.sendQuestionAnswered(request.RoomKey, result)
 			return map[string]int{"points": result}, nil
 		},
 		release: unlockRoom(room),
@@ -290,6 +293,7 @@ func (r *roomContainer) advanceGame(message json.RawMessage) (*rpcRequestContext
 	return &rpcRequestContext{
 		process: func() (any, error) {
 			room.AdvanceToNextQuestion()
+			r.statistics.sendGameAdvanced(request.RoomKey)
 			return map[string]any{}, nil
 		}, release: unlockRoom(room),
 	}, err
@@ -334,6 +338,8 @@ func (r *roomContainer) cleanRooms() {
 		if room.Finished() || now.Sub(room.Creation()) > time.Hour*24 {
 			log.Printf("cleaning room %s", key)
 			delete(r.openRooms, key)
+			r.statistics.sendRoomCleared(room.Key(), room.Finished())
+			delete(r.statistics.roomKeys, key)
 		}
 	}
 }

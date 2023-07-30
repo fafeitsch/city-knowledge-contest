@@ -2,29 +2,25 @@ package webapi
 
 import (
 	"fmt"
+	"github.com/fafeitsch/city-knowledge-contest/backend/contest"
+	"github.com/fafeitsch/city-knowledge-contest/backend/keygen"
 	"log"
 	"net/http"
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
-	"strings"
 	"sync"
 	"time"
 )
 
 type statisticsContainer struct {
 	sync.RWMutex
-	secretUrlKey string
-	subscribers  []websocketNotifier
+	subscribers []websocketNotifier
+	roomKeys    map[string]string
 }
 
 func (s *statisticsContainer) createSocket(
 	writer http.ResponseWriter, request *http.Request, options Options,
 ) error {
-	parts := strings.Split(request.RequestURI, "/")
-	if parts[2] != s.secretUrlKey {
-		writer.WriteHeader(http.StatusNotFound)
-		return nil
-	}
 	connection, err := websocket.Accept(
 		writer, request, &websocket.AcceptOptions{InsecureSkipVerify: options.AllowCors},
 	)
@@ -52,18 +48,85 @@ func (s *statisticsContainer) createSocket(
 	return nil
 }
 
+func (s *statisticsContainer) pseudomizeRoomKey(roomKey string) string {
+	if s.roomKeys[roomKey] == "" {
+		s.roomKeys[roomKey] = keygen.RoomKey()
+	}
+	return s.roomKeys[roomKey]
+}
+
 func (s *statisticsContainer) sendRoomCreated(key string) {
 	s.RLock()
 	defer s.RUnlock()
 	for _, notifier := range s.subscribers {
-		notifier.write(map[string]string{"topic": "room created", "roomKey": key})
+		notifier.write(map[string]string{"topic": "room created", "roomKey": s.pseudomizeRoomKey(key)})
 	}
 }
 
-func (s *statisticsContainer) sendRoomJoined(key string) {
+func (s *statisticsContainer) sendPlayerJoined(key string) {
 	s.RLock()
 	defer s.RUnlock()
 	for _, notifier := range s.subscribers {
-		notifier.write(map[string]string{"topic": "room joined", "roomKey": key})
+		notifier.write(map[string]string{"topic": "player joined", "roomKey": s.pseudomizeRoomKey(key)})
+	}
+}
+
+func (s *statisticsContainer) sendPlayerLeft(key string) {
+	s.RLock()
+	defer s.RUnlock()
+	for _, notifier := range s.subscribers {
+		notifier.write(map[string]string{"topic": "player left", "roomKey": s.pseudomizeRoomKey(key)})
+	}
+}
+
+func (s *statisticsContainer) sendGameStarted(key string, options contest.RoomOptions) {
+	s.RLock()
+	defer s.RUnlock()
+	for _, notifier := range s.subscribers {
+		notifier.write(
+			map[string]any{
+				"topic":               "game started",
+				"roomKey":             s.pseudomizeRoomKey(key),
+				"questions":           options.NumberOfQuestions,
+				"maxAnswerTimeSecond": options.MaxAnswerTime / time.Second,
+				"streelist":           options.StreetList.Name,
+			},
+		)
+	}
+}
+
+func (s *statisticsContainer) sendQuestionAnswered(key string, points int) {
+	s.RLock()
+	defer s.RUnlock()
+	for _, notifier := range s.subscribers {
+		notifier.write(
+			map[string]any{
+				"topic":   "question answered",
+				"roomKey": s.pseudomizeRoomKey(key),
+				"points":  points,
+			},
+		)
+	}
+}
+
+func (s *statisticsContainer) sendGameAdvanced(key string) {
+	s.RLock()
+	defer s.RUnlock()
+	for _, notifier := range s.subscribers {
+		notifier.write(map[string]string{"topic": "game advanced", "roomKey": s.pseudomizeRoomKey(key)})
+	}
+}
+
+func (s *statisticsContainer) sendRoomCleared(key string, finished bool) {
+	s.RLock()
+	defer s.RUnlock()
+	for _, notifier := range s.subscribers {
+		notifier.write(
+			map[string]any{
+				"topic":    "room cleared",
+				"roomKey":  s.pseudomizeRoomKey(key),
+				"finished": finished,
+			},
+		)
 	}
 }
