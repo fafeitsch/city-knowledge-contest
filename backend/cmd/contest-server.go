@@ -105,12 +105,12 @@ var dataProtectionFileFlag = &cli.StringFlag{
 	Usage:       "Path to the data protection file.",
 	Destination: &dataProtectionFile,
 }
-var enableStatisticsSocket bool
-var enableStatisticsSocketFlag = &cli.BoolFlag{
-	Name:        "enableStatistics",
-	Value:       false,
-	Usage:       "If true, the server offers a public (!) statistics socket under /wsstatistics",
-	Destination: &enableStatisticsSocket,
+var adminApiHost string
+var adminApiHostFlag = &cli.StringFlag{
+	Name:        "adminApiHost",
+	Value:       "",
+	Usage:       "Host and port on which the admin API runs, e.g. 127.0.0.1:23123",
+	Destination: &adminApiHost,
 }
 
 func main() {
@@ -129,7 +129,7 @@ func main() {
 			sslKeyFlag,
 			dataProtectionFileFlag,
 			imprintFileFlag,
-			enableStatisticsSocketFlag,
+			adminApiHostFlag,
 		},
 		HideHelpCommand: true,
 		Action: func(context *cli.Context) error {
@@ -142,7 +142,6 @@ func main() {
 					DataProtectionFile: dataProtectionFile,
 					ImprintFile:        imprintFile,
 					Version:            version,
-					EnableStatistics:   enableStatisticsSocket,
 				},
 			)
 			keygen.SetPlayerKeyLength(playerKeyLength)
@@ -154,16 +153,36 @@ func main() {
 			log.Printf("Using Nominatim API backend at \"%s\"", geodata.NominatimServer)
 			log.Printf("Using Tile API backend at \"%s\"", tileServer)
 			log.Printf("Using Tile cache enabled: %v", useTileCache)
-			log.Printf("Statistics socket enabled: %v", enableStatisticsSocket)
+			log.Printf("Admin API enabled: %v", adminApiHost != "")
 			log.Printf("Using data protection file at \"%s\"", dataProtectionFile)
 			log.Printf("Using imprint file at \"%s\"", imprintFile)
+			errorChannel := make(chan error)
 			if sslKey != "" && sslCert != "" {
 				log.Printf("SSL key file: %s", sslKey)
 				log.Printf("SSL certificate file: %s", sslCert)
-				return http.ListenAndServeTLS(":"+strconv.Itoa(port), sslCert, sslKey, handler)
+				go func() {
+					errorChannel <- http.ListenAndServeTLS(":"+strconv.Itoa(port), sslCert, sslKey, handler)
+				}()
+				if adminApiHost != "" {
+					go func() {
+						errorChannel <- http.ListenAndServeTLS(adminApiHost, sslKey, sslCert, handler.AdminHandler)
+					}()
+				}
+				return <-errorChannel
 			}
 			log.Printf("Running in unencrypted mode, should only be used for development and debugging.")
-			return http.ListenAndServe(":"+strconv.Itoa(port), handler)
+			go func() {
+				err := http.ListenAndServe(":"+strconv.Itoa(port), handler)
+				errorChannel <- err
+			}()
+			if adminApiHost != "" {
+				go func() {
+					err := http.ListenAndServe(adminApiHost, handler.AdminHandler)
+					errorChannel <- err
+				}()
+			}
+			err := <-errorChannel
+			return err
 		},
 	}
 	log.Fatal(app.Run(os.Args))

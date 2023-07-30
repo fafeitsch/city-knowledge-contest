@@ -30,5 +30,4 @@ type Options struct {
 	ImprintFile        string
 	DataProtectionFile string
 	Version            string
-	EnableStatistics   bool
 }

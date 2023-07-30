@@ -14,17 +14,18 @@ import (
 )
 
 type RpcServer struct {
-	methods            map[string]rpcHandler
-	options            Options
-	playerUpgrader     func(w http.ResponseWriter, req *http.Request) error
-	statisticsUpgrader func(w http.ResponseWriter, req *http.Request) error
-	roomContainer      roomContainer
+	methods        map[string]rpcHandler
+	options        Options
+	playerUpgrader func(w http.ResponseWriter, req *http.Request) error
+	roomContainer  roomContainer
+	AdminHandler   http.Handler
 }
 
 func New(options Options) *RpcServer {
 	statisticsContainer := statisticsContainer{
 		subscribers: make([]websocketNotifier, 0),
 		roomKeys:    make(map[string]string),
+		allowCors:   options.AllowCors,
 	}
 	roomContainer := roomContainer{openRooms: make(map[string]contest.Room), statistics: &statisticsContainer}
 	roomContainer.startRoomCleaner()
@@ -45,10 +46,8 @@ func New(options Options) *RpcServer {
 		playerUpgrader: func(resp http.ResponseWriter, req *http.Request) error {
 			return roomContainer.upgradeToWebSocket(resp, req, options)
 		},
-		statisticsUpgrader: func(resp http.ResponseWriter, req *http.Request) error {
-			return statisticsContainer.createSocket(resp, req, options)
-		},
 		roomContainer: roomContainer,
+		AdminHandler:  &statisticsContainer,
 	}
 }
 
@@ -128,12 +127,6 @@ func (r *RpcServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		var err error
 		if parts[1] == "ws" {
 			err = r.playerUpgrader(resp, req)
-		} else if parts[1] == "wsstatistics" {
-			if r.options.EnableStatistics == false {
-				resp.WriteHeader(http.StatusForbidden)
-				return
-			}
-			err = r.statisticsUpgrader(resp, req)
 		}
 		if err != nil {
 			fmt.Printf("%v", err)

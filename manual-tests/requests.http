@@ -89,4 +89,4 @@ ckc-player-secret: {{playerSecret}}
 
 ### Listen on statistic events
 
-WEBSOCKET ws://127.0.0.1:23123/wsstatistics/abc
+WEBSOCKET ws://127.0.0.1:23124/ws/statistics

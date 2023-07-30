@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
+	"strings"
 	"sync"
 	"time"
 )
@@ -16,14 +17,34 @@ type statisticsContainer struct {
 	sync.RWMutex
 	subscribers []websocketNotifier
 	roomKeys    map[string]string
+	allowCors   bool
 }
 
-func (s *statisticsContainer) createSocket(
-	writer http.ResponseWriter, request *http.Request, options Options,
-) error {
-	connection, err := websocket.Accept(
-		writer, request, &websocket.AcceptOptions{InsecureSkipVerify: options.AllowCors},
-	)
+func (s *statisticsContainer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+	parts := strings.Split(req.RequestURI, "/")
+	if s.allowCors {
+		setCorsHeaders(resp)
+	}
+	if req.Method == "OPTIONS" {
+		return
+	}
+	if req.Header.Get("Upgrade") == "websocket" {
+		var err error
+		if parts[1] == "ws" && parts[2] == "statistics" {
+			err = s.createSocket(resp, req)
+		}
+		if err != nil {
+			fmt.Printf("%v", err)
+			resp.WriteHeader(http.StatusInternalServerError)
+		}
+		return
+	}
+	resp.WriteHeader(http.StatusNoContent)
+	return
+}
+
+func (s *statisticsContainer) createSocket(writer http.ResponseWriter, request *http.Request) error {
+	connection, err := websocket.Accept(writer, request, &websocket.AcceptOptions{InsecureSkipVerify: s.allowCors})
 	if err != nil {
 		return fmt.Errorf("could not upgrade to websockets: %v", err)
 	}
