@@ -17,20 +17,18 @@
 </style>
 
 <script lang="ts">
-  import store from '../store';
-  import Button from '../components/Button.svelte';
-  import rpc from '../rpc';
+import store from '../store';
+import Button from '../components/Button.svelte';
+import rpc from '../rpc';
 
 function leaveGame() {
   rpc.leaveGame().subscribe((data) => {
     window.location = window.location.protocol + '//' + window.location.host;
     store.set.resetGame();
   });
-
 }
-
 </script>
 
 <div class="leave-button">
-  <Button on:click="{leaveGame}" title="Raum verlassen"/>
+  <Button on:click="{leaveGame}" title="Raum verlassen" e2eTestId="leave-game-button" />
 </div>

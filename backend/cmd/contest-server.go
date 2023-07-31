@@ -105,6 +105,13 @@ var dataProtectionFileFlag = &cli.StringFlag{
 	Usage:       "Path to the data protection file.",
 	Destination: &dataProtectionFile,
 }
+var streetSelectionSeed string
+var streetSelectionSeedFlag = &cli.StringFlag{
+	Name:        "streetSelectionSeed",
+	Value:       "",
+	Usage:       "If provided, the seed is used for street selection. Usually only needed for E2E testing.",
+	Destination: &streetSelectionSeed,
+}
 
 func main() {
 	app := cli.App{
@@ -122,6 +129,7 @@ func main() {
 			sslKeyFlag,
 			dataProtectionFileFlag,
 			imprintFileFlag,
+			streetSelectionSeedFlag,
 		},
 		HideHelpCommand: true,
 		Action: func(context *cli.Context) error {
@@ -134,6 +142,7 @@ func main() {
 					DataProtectionFile: dataProtectionFile,
 					ImprintFile:        imprintFile,
 					Version:            version,
+					Seed:               streetSelectionSeed,
 				},
 			)
 			keygen.SetPlayerKeyLength(playerKeyLength)
@@ -147,6 +156,7 @@ func main() {
 			log.Printf("Using Tile cache enabled: %v", useTileCache)
 			log.Printf("Using data protection file at \"%s\"", dataProtectionFile)
 			log.Printf("Using imprint file at \"%s\"", imprintFile)
+			log.Printf("Using street selection seed \"%s\"", streetSelectionSeed)
 			if sslKey != "" && sslCert != "" {
 				log.Printf("SSL key file: %s", sslKey)
 				log.Printf("SSL certificate file: %s", sslCert)

@@ -108,17 +108,17 @@ function onAnswerQuestion(event: CustomEvent) {
     <GamePanel />
   </div>
   {#if $countdown}
-    <div class="overlay">{$countdown}</div>
+    <div class="overlay" data-testid="countdown-overlay">{$countdown}</div>
   {/if}
   <Leaflet on:mapClicked="{onAnswerQuestion}" disabled="{$lastResult !== undefined}" />
   <LeaveButton />
   {#if $question && !$gameFinished && $lastResult === undefined}
     <div class="container">
-      <div class="card">Suche den Ort {$question}</div>
+      <div class="card" data-testid="question-card">Suche den Ort {$question}</div>
     </div>
   {:else if $gameFinished || $lastResult !== undefined}
     <div class="container">
-      <div class="card">
+      <div class="card" data-testid="game-state-card">
         <div class="mb-3">
           {#if $lastResult}
             <div>Richtig</div>
@@ -128,7 +128,7 @@ function onAnswerQuestion(event: CustomEvent) {
           {/if}
         </div>
         {#if $gameFinished}
-          <Button on:click="{() => advanceGame()}" title="Weiter" />
+          <Button on:click="{() => advanceGame()}" title="Weiter" e2eTestId="proceed-game-button" />
         {/if}
       </div>
     </div>

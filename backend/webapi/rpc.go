@@ -19,6 +19,7 @@ import (
 type roomContainer struct {
 	sync.RWMutex
 	openRooms map[string]contest.Room
+	seed      string
 }
 
 type rpcHandler func(message json.RawMessage) (*rpcRequestContext, error)
@@ -73,7 +74,7 @@ func (r *roomContainer) createRoom(message json.RawMessage) (*rpcRequestContext,
 	}
 	return &rpcRequestContext{
 		process: func() (any, error) {
-			room := contest.NewRoom()
+			room := contest.NewRoom(r.seed)
 			player := room.Join(request.Name)
 			r.Lock()
 			r.openRooms[room.Key()] = room

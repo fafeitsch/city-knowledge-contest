@@ -61,13 +61,27 @@ function dispatchInputEvent(event) {
 export let placeholder: string;
 export let value: string = '';
 export let type = 'text';
+export let e2eTestId = 'input-field';
 </script>
 
 <div class="input-container" data-value="{value}">
   {#if type === 'text'}
-    <input on:change on:input="{dispatchInputEvent}" autocomplete="off" bind:value="{value}" />
+    <input
+      on:change
+      on:input="{dispatchInputEvent}"
+      autocomplete="off"
+      bind:value="{value}"
+      data-testid="{e2eTestId}"
+    />
   {:else if type === 'number'}
-    <input on:change on:input="{dispatchInputEvent}" autocomplete="off" bind:value="{value}" type="number" />
+    <input
+      on:change
+      on:input="{dispatchInputEvent}"
+      autocomplete="off"
+      bind:value="{value}"
+      type="number"
+      data-testid="{e2eTestId}"
+    />
   {/if}
   <label class="label">
     <div class="placeholder">{placeholder}</div>

@@ -34,6 +34,7 @@ export let playerKey = '';
       class="d-flex align-items-center justify-content-spaced player {playerKey === player.playerKey
         ? 'highlight'
         : ''}"
+      data-testid="player-list-entry"
     >
       <div>{player.name}</div>
       <div class="d-flex gap-2">

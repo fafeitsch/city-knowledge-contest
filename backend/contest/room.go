@@ -2,6 +2,7 @@ package contest
 
 import (
 	"fmt"
+	"hash/fnv"
 	"math"
 	"math/rand"
 	"sync"
@@ -125,11 +126,17 @@ func (r *roomImpl) Players() []Player {
 	return result
 }
 
-func NewRoom() Room {
+func NewRoom(seedText string) Room {
+	seed := time.Now().Unix()
+	if seedText != "" {
+		hashFunc := fnv.New32a()
+		_, _ = hashFunc.Write([]byte(seedText))
+		seed = int64(hashFunc.Sum32())
+	}
 	return &roomImpl{
 		key:      keygen.RoomKey(),
 		creation: time.Now(),
-		random:   rand.New(rand.NewSource(time.Now().Unix())),
+		random:   rand.New(rand.NewSource(seed)),
 		players:  make(map[string]*Player),
 		options: RoomOptions{
 			MaxAnswerTime:     120 * time.Second,

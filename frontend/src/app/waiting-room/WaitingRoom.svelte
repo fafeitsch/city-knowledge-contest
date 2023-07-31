@@ -84,12 +84,12 @@ function startGame() {
 <div class="player-list">
   <Players playerKey="{$room.playerKey}" players="{$players}" />
 </div>
-<LeaveButton/>
+<LeaveButton />
 <CoverImage>
   <h1>Gleich geht's los…</h1>
   <Card>
     <p>Teile den Link, um andere Personen zu diesem Spiel einzuladen:</p>
-    <p class="fw-bold d-flex align-items-center gap-3">
+    <p class="fw-bold d-flex align-items-center gap-3" data-testid="room-link-display">
       {window.location}
       <CopyIcon
         width="{16}"
@@ -112,18 +112,21 @@ function startGame() {
         on:input="{(event) => updateNumberOfQuestions(event, $remoteConfiguration)}"
         value="{$remoteConfiguration?.numberOfQuestions || ''}"
         type="number"
+        e2eTestId="number-of-questions-input"
       />
       <Input
         placeholder="Sekunden pro Frage"
         on:input="{(event) => updateMaxAnswerTimeSec(event, $remoteConfiguration)}"
         value="{$remoteConfiguration?.maxAnswerTimeSec || ''}"
         type="number"
+        e2eTestId="max-answer-time-input"
       />
     </div>
     <Button
       title="Spiel starten"
       on:click="{startGame}"
       disabled="{!$remoteConfiguration || $remoteConfiguration.errors.length > 0}"
+      e2eTestId="start-game-button"
     />
   </Card>
 </CoverImage>

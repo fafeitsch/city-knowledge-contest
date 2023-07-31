@@ -21,7 +21,7 @@ type RpcServer struct {
 }
 
 func New(options Options) *RpcServer {
-	roomContainer := roomContainer{openRooms: make(map[string]contest.Room)}
+	roomContainer := roomContainer{openRooms: make(map[string]contest.Room), seed: options.Seed}
 	roomContainer.startRoomCleaner()
 	methods := map[string]rpcHandler{
 		"createRoom":              roomContainer.createRoom,

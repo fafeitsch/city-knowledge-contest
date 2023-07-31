@@ -1,0 +1,125 @@
+{
+  "uuid": "e94e9af7-cc3d-4986-b7a6-de967adf6263",
+  "lastMigration": 28,
+  "name": "Nominatim mock",
+  "endpointPrefix": "",
+  "latency": 0,
+  "port": 3001,
+  "hostname": "",
+  "folders": [],
+  "routes": [
+    {
+      "uuid": "c643cbfe-209b-4e15-ab29-a0fb7886c8c5",
+      "type": "http",
+      "documentation": "for \"Untere Bockgasse\"",
+      "method": "get",
+      "endpoint": "search",
+      "responses": [
+        {
+          "uuid": "edf032c1-320e-44e4-b035-05f0659adc46",
+          "body": "[{\"lat\": \"49.791782611961395\", \"lon\": \"9.92843270301819\"}]",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "",
+          "headers": [
+            {
+              "key": "",
+              "value": ""
+            }
+          ],
+          "bodyType": "INLINE",
+          "filePath": "",
+          "databucketID": "",
+          "sendFileAsBody": false,
+          "rules": [
+            {
+              "target": "query",
+              "modifier": "street",
+              "value": "Untere+Bockgasse",
+              "invert": false,
+              "operator": "equals"
+            }
+          ],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "crudKey": "id"
+        }
+      ],
+      "enabled": true,
+      "responseMode": null
+    },
+    {
+      "uuid": "0129fc9b-a05c-49d5-89c2-f07ecdd9680a",
+      "type": "http",
+      "documentation": "",
+      "method": "get",
+      "endpoint": "reverse",
+      "responses": [
+        {
+          "uuid": "a32dbc02-7e81-45f9-8bd5-f59950467b4b",
+          "body": "{\"address\": {\"road\": \"Untere Bockgasse\"}}",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "",
+          "headers": [],
+          "bodyType": "INLINE",
+          "filePath": "",
+          "databucketID": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "crudKey": "id"
+        }
+      ],
+      "enabled": true,
+      "responseMode": null
+    }
+  ],
+  "rootChildren": [
+    {
+      "type": "route",
+      "uuid": "c643cbfe-209b-4e15-ab29-a0fb7886c8c5"
+    },
+    {
+      "type": "route",
+      "uuid": "0129fc9b-a05c-49d5-89c2-f07ecdd9680a"
+    }
+  ],
+  "proxyMode": false,
+  "proxyHost": "",
+  "proxyRemovePrefix": false,
+  "tlsOptions": {
+    "enabled": false,
+    "type": "CERT",
+    "pfxPath": "",
+    "certPath": "",
+    "keyPath": "",
+    "caPath": "",
+    "passphrase": ""
+  },
+  "cors": true,
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    }
+  ],
+  "proxyReqHeaders": [
+    {
+      "key": "",
+      "value": ""
+    }
+  ],
+  "proxyResHeaders": [
+    {
+      "key": "",
+      "value": ""
+    }
+  ],
+  "data": []
+}

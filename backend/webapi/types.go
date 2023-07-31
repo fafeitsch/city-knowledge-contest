@@ -30,4 +30,5 @@ type Options struct {
 	ImprintFile        string
 	DataProtectionFile string
 	Version            string
+	Seed               string
 }

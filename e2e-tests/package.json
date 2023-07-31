@@ -1,0 +1,25 @@
+{
+  "name": "city-knowledge-contest",
+  "version": "1.0.0",
+  "description": "**Who knows finds the streets first?** *A PvP online game to get to know your city better.*",
+  "main": "index.js",
+  "scripts": {
+    "e2e": "./e2e.sh",
+    "playwright-ui": "playwright test --ui"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fafeitsch/city-knowledge-contest.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/fafeitsch/city-knowledge-contest/issues"
+  },
+  "homepage": "https://github.com/fafeitsch/city-knowledge-contest#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.36.2",
+    "@mockoon/cli": "^4.0.0"
+  }
+}

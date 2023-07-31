@@ -28,7 +28,7 @@ const state$ = new BehaviorSubject<State>(state);
 const store = {
   get: {
     players$: state$.pipe(
-      map((state) => state.players),
+      map((state) => state.players.sort((p1, p2) => p1.name.localeCompare(p2.name))),
       distinctUntilChanged(),
     ),
     room$: state$.pipe(
@@ -51,7 +51,9 @@ const store = {
       });
     },
     removePlayer(removedPlayer: Player) {
-      const newPlayers: Player[] = state$.value.players.filter(player => player.playerKey !== removedPlayer.playerKey);
+      const newPlayers: Player[] = state$.value.players.filter(
+        (player) => player.playerKey !== removedPlayer.playerKey,
+      );
       state$.next({
         ...state$.value,
         players: newPlayers,

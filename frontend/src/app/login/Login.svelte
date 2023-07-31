@@ -72,15 +72,35 @@ async function joinRoom() {
       >Mit der Eingabe eines Pseudonyms erklärst du dich damit einverstanden, dass dieses in deinem Browser gespeichert
       wird. So musst du es beim nächsten Spiel nicht erneut eingeben.</span
     >
-    <Input on:input="{handleUsernameChange}" placeholder="Wie heißt du?" value="{userName}" />
+    <Input
+      on:input="{handleUsernameChange}"
+      placeholder="Wie heißt du?"
+      value="{userName}"
+      e2eTestId="user-name-input"
+    />
     {#if roomKey.length < 1}
-      <Button title="Neue Karte erstellen" on:click="{createRoom}" disabled="{!userName}" />
+      <Button
+        title="Neue Karte erstellen"
+        on:click="{createRoom}"
+        disabled="{!userName}"
+        e2eTestId="create-room-button"
+      />
     {:else}
-      <Button on:click="{joinRoom}" title="Karte beitreten" disabled="{!userName || !roomKey}" />
+      <Button
+        on:click="{joinRoom}"
+        title="Karte beitreten"
+        disabled="{!userName || !roomKey}"
+        e2eTestId="join-room-button"
+      />
     {/if}
     {#if $joinError}
       <div>Du konntest dem Raum nicht beitreten. Prüfe den Raum-ID oder erstelle einen neuen Raum</div>
-      <Button title="Neue Karte erstellen" on:click="{createRoom}" disabled="{!userName}" />
+      <Button
+        title="Neue Karte erstellen"
+        on:click="{createRoom}"
+        disabled="{!userName}"
+        e2eTestId="create-room-button"
+      />
     {/if}
   </Card>
 </CoverImage>

@@ -35,6 +35,7 @@ button {
 <script lang="ts">
 export let title: string;
 export let disabled: boolean = false;
+export let e2eTestId: string = 'button';
 </script>
 
-<button class="{disabled ? 'disabled' : ''}" on:click disabled="{disabled}">{title}</button>
+<button class="{disabled ? 'disabled' : ''}" on:click disabled="{disabled}" data-testid="{e2eTestId}">{title}</button>

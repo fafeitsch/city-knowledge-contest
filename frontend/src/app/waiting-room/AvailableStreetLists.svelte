@@ -31,9 +31,11 @@ function updateStreetList(event: any) {
 }
 </script>
 
-<select class="select" value="{selectedStreetList}" on:change="{updateStreetList}">
+<select class="select" value="{selectedStreetList}" on:change="{updateStreetList}" data-testid="select-streetlist">
   {#each $streetLists as streetList}
-    <option class="placeholder" value="" disabled selected hidden>Straßenkarte auswählen</option>
-    <option value="{streetList.FileName}">{streetList.name}</option>
+    <option class="placeholder" value="" disabled selected hidden data-testid="streetlist-option-initial-selection"
+      >Straßenkarte auswählen</option
+    >
+    <option value="{streetList.FileName}" data-testid="streetlist-option">{streetList.name}</option>
   {/each}
 </select>
