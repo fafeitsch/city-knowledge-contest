@@ -185,7 +185,7 @@ type leaveRequest struct {
 }
 
 func (r *roomContainer) leaveGame(message json.RawMessage) (*rpcRequestContext, error) {
-	request := parseMessage[startGameRequest](message)
+	request := parseMessage[leaveRequest](message)
 	room, err := r.validateRoomAndPlayer(request.RoomKey, request.PlayerKey, request.PlayerSecret)
 	if err != nil {
 		return &rpcRequestContext{release: unlockRoom(room)}, err
@@ -329,8 +329,9 @@ func (r *roomContainer) cleanRooms() {
 	defer r.Unlock()
 	now := time.Now()
 	for key, room := range r.openRooms {
-		if room.Finished() || now.Sub(room.Creation()) > time.Hour*24 {
+		if room.Finished() || now.Sub(room.Creation()) > time.Second*24 {
 			log.Printf("cleaning room %s", key)
+			_ = r.openRooms[key].Close()
 			delete(r.openRooms, key)
 		}
 	}

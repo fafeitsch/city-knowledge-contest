@@ -33,6 +33,7 @@ type Room interface {
 	Finished() bool
 	Creation() time.Time
 	Started() bool
+	Close() error
 }
 
 type roomImpl struct {
@@ -47,6 +48,7 @@ type roomImpl struct {
 	advanceGame     chan bool
 	finished        bool
 	started         bool
+	quit            chan bool
 }
 
 func (r *roomImpl) Key() string {
@@ -66,6 +68,7 @@ type Question struct {
 	begin              time.Time
 	duration           time.Duration
 	number             int
+	quit               chan bool
 }
 
 func (q *Question) waitForPlayers(countdown func(int)) {
@@ -86,6 +89,10 @@ func (q *Question) waitForPlayers(countdown func(int)) {
 			countdown(0)
 			t1.Stop()
 		case <-finish.C:
+			t1.Stop()
+			t2.Stop()
+			finished = true
+		case <-q.quit:
 			t1.Stop()
 			t2.Stop()
 			finished = true
@@ -142,6 +149,7 @@ func NewRoom(seedText string) Room {
 			MaxAnswerTime:     120 * time.Second,
 			NumberOfQuestions: 10,
 		},
+		quit: make(chan bool),
 	}
 }
 
@@ -222,13 +230,19 @@ func (r *roomImpl) Play(playerKey string) {
 	r.points = make(map[string]int)
 	go func() {
 		r.started = true
+	GameLoop:
 		for round := 0; round < numberOfQuestions; round++ {
 			err := r.playQuestion(round)
 			if err != nil {
 				break
 			}
 			r.advanceGame = make(chan bool)
-			<-r.advanceGame
+			select {
+			case <-r.advanceGame:
+				break
+			case <-r.quit:
+				break GameLoop
+			}
 			r.advanceGame = nil
 		}
 		r.notifyPlayers(
@@ -239,6 +253,11 @@ func (r *roomImpl) Play(playerKey string) {
 		r.points = nil
 		r.finished = true
 	}()
+}
+
+func (r *roomImpl) Close() error {
+	close(r.quit)
+	return nil
 }
 
 func (r *roomImpl) playQuestion(round int) error {
@@ -264,6 +283,7 @@ func (r *roomImpl) playQuestion(round int) error {
 		begin:              time.Now(),
 		duration:           r.options.MaxAnswerTime,
 		number:             round,
+		quit:               r.quit,
 	}
 	r.Unlock()
 	r.sendCountdowns(
@@ -378,9 +398,10 @@ func (r *roomImpl) Creation() time.Time {
 
 type Player struct {
 	Notifier
-	Secret string
-	Key    string
-	Name   string
+	Secret        string
+	Key           string
+	Name          string
+	receivedKicks int
 }
 
 type QuestionResult struct {

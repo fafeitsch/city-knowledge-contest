@@ -37,7 +37,7 @@ Content-Type: application/json
 
 {
   "method": "updateRoom",
-  "params": {"listFileName": "wuerzburg.json", "numberOfQuestions":  2, "playerKey": "{{playerKey}}", "roomKey": "{{roomKey}}", "playerSecret":  "{{playerSecret}}","maxAnswerTimeSec": 10 },
+  "params": {"listFileName": "wuerzburg-altstadt.json", "numberOfQuestions":  2, "playerKey": "{{playerKey}}", "roomKey": "{{roomKey}}", "playerSecret":  "{{playerSecret}}","maxAnswerTimeSec": 10 },
   "id":"5555"
 }
 
