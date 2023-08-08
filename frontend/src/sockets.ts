@@ -1,7 +1,7 @@
-import store from './store';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { environment } from './environment';
 import type { RoomConfiguration } from './rpc';
+import { store } from './store';
 
 export enum Topic {
   'roomUpdated' = 'roomUpdated',
@@ -31,10 +31,10 @@ export function initWebSocket() {
       if (subscriptions[data.topic]) {
         subscriptions[data.topic].next(data.payload);
       }
+      console.log(data.topic);
       if (data.topic === 'successfullyJoined') {
         store.set.players(data.payload.players);
-      } else if(data.topic === 'playerLeft') {
-        console.warn("On Message playerLeft", data);
+      } else if (data.topic === 'playerLeft' || data.topic === 'playerKicked') {
         store.set.removePlayer(data.payload);
       } else if (data.topic === 'playerJoined') {
         store.set.addPlayer(data.payload);

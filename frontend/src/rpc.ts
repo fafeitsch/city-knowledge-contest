@@ -1,6 +1,6 @@
 import { environment } from './environment';
 import { catchError, defer, EMPTY, map, Observable, of, switchMap, take, tap } from 'rxjs';
-import store from './store';
+import { store, type Player } from './store';
 
 function doRpc<ResponseType>(method: string, params: any): Observable<ResponseType> {
   return defer(() =>
@@ -104,6 +104,21 @@ const rpc = {
       switchMap((room) =>
         doRpc<void>('leaveGame', {
           ...room,
+        }),
+      ),
+      catchError((err) => {
+        console.error(err);
+        return EMPTY;
+      }),
+    );
+  },
+  kickPlayer(player: Player): Observable<void> {
+    return store.get.room$.pipe(
+      take(1),
+      switchMap((room) =>
+        doRpc<void>('kickPlayer', {
+          ...room,
+          target: player.playerKey,
         }),
       ),
       catchError((err) => {

@@ -14,13 +14,13 @@
 
 <script lang="ts">
 import { onMount } from 'svelte';
-import store from '../../store';
 import Input from '../../components/Input.svelte';
 import Button from '../../components/Button.svelte';
 import rpc from '../../rpc';
 import CoverImage from '../../components/CoverImage.svelte';
 import Card from '../../components/Card.svelte';
 import { Subject, catchError, map, of, switchMap, tap } from 'rxjs';
+import { store } from '../../store';
 
 let roomKey = '';
 let userName = '';

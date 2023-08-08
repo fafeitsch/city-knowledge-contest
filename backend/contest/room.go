@@ -13,30 +13,7 @@ import (
 	"github.com/fafeitsch/city-knowledge-contest/backend/types"
 )
 
-type Room interface {
-	Lock()
-	Unlock()
-	Players() []Player
-	Options() RoomOptions
-	ConfigErrors() []string
-	SetOptions(RoomOptions, string)
-	Join(string) Player
-	Leave(string) Player
-	FindPlayer(string) (*Player, bool)
-	Play(string)
-	AnswerQuestion(string, types.Coordinate) (int, error)
-	HasActiveQuestion(string) bool
-	Question() (string, int)
-	CanBeAdvanced() bool
-	AdvanceToNextQuestion()
-	Key() string
-	Finished() bool
-	Creation() time.Time
-	Started() bool
-	Close() error
-}
-
-type roomImpl struct {
+type Room struct {
 	mutex           sync.Mutex
 	key             string
 	creation        time.Time
@@ -51,7 +28,7 @@ type roomImpl struct {
 	quit            chan bool
 }
 
-func (r *roomImpl) Key() string {
+func (r *Room) Key() string {
 	return r.key
 }
 
@@ -117,15 +94,15 @@ func (r *RoomOptions) Errors() []string {
 	return errors
 }
 
-func (r *roomImpl) Lock() {
+func (r *Room) Lock() {
 	r.mutex.Lock()
 }
 
-func (r *roomImpl) Unlock() {
+func (r *Room) Unlock() {
 	r.mutex.Unlock()
 }
 
-func (r *roomImpl) Players() []Player {
+func (r *Room) Players() []Player {
 	result := make([]Player, 0, len(r.players))
 	for key := range r.players {
 		result = append(result, *r.players[key])
@@ -133,14 +110,14 @@ func (r *roomImpl) Players() []Player {
 	return result
 }
 
-func NewRoom(seedText string) Room {
+func NewRoom(seedText string) *Room {
 	seed := time.Now().Unix()
 	if seedText != "" {
 		hashFunc := fnv.New32a()
 		_, _ = hashFunc.Write([]byte(seedText))
 		seed = int64(hashFunc.Sum32())
 	}
-	return &roomImpl{
+	return &Room{
 		key:      keygen.RoomKey(),
 		creation: time.Now(),
 		random:   rand.New(rand.NewSource(seed)),
@@ -153,15 +130,15 @@ func NewRoom(seedText string) Room {
 	}
 }
 
-func (r *roomImpl) Options() RoomOptions {
+func (r *Room) Options() RoomOptions {
 	return r.options
 }
 
-func (r *roomImpl) ConfigErrors() []string {
+func (r *Room) ConfigErrors() []string {
 	return r.options.Errors()
 }
 
-func (r *roomImpl) SetOptions(options RoomOptions, playerKey string) {
+func (r *Room) SetOptions(options RoomOptions, playerKey string) {
 	player, ok := r.players[playerKey]
 	if !ok {
 		panic(fmt.Sprintf("player with key \"%s\" does not exist in room \"%s\"", playerKey, r.Key()))
@@ -174,7 +151,7 @@ func (r *roomImpl) SetOptions(options RoomOptions, playerKey string) {
 	)
 }
 
-func (r *roomImpl) Join(name string) Player {
+func (r *Room) Join(name string) Player {
 	player := Player{Name: name, Secret: keygen.PlayerKey(), Key: keygen.PlayerKey()}
 	r.notifyPlayers(
 		func(p Player) {
@@ -185,7 +162,7 @@ func (r *roomImpl) Join(name string) Player {
 	return player
 }
 
-func (r *roomImpl) Leave(playerKey string) Player {
+func (r *Room) Leave(playerKey string) Player {
 	player := r.players[playerKey]
 	r.notifyPlayers(
 		func(p Player) {
@@ -199,12 +176,26 @@ func (r *roomImpl) Leave(playerKey string) Player {
 	return *player
 }
 
-func (r *roomImpl) FindPlayer(key string) (*Player, bool) {
+func (r *Room) Kick(target string, initiator string) Player {
+	kicked := r.players[target]
+	r.notifyPlayers(
+		func(p Player) {
+			p.NotifyPlayerKicked(kicked.Key, kicked.Name, initiator)
+		},
+	)
+	delete(r.players, target)
+	if len(r.players) == 0 {
+		r.finished = true
+	}
+	return *kicked
+}
+
+func (r *Room) FindPlayer(key string) (*Player, bool) {
 	result, ok := r.players[key]
 	return result, ok
 }
 
-func (r *roomImpl) notifyPlayers(consumer func(Player)) {
+func (r *Room) notifyPlayers(consumer func(Player)) {
 	for _, player := range r.players {
 		if player.Notifier == nil {
 			continue
@@ -213,7 +204,7 @@ func (r *roomImpl) notifyPlayers(consumer func(Player)) {
 	}
 }
 
-func (r *roomImpl) Play(playerKey string) {
+func (r *Room) Play(playerKey string) {
 	if len(r.options.Errors()) > 0 {
 		panic(fmt.Sprintf("can't start the game because there are still errors in its config"))
 	}
@@ -255,12 +246,12 @@ func (r *roomImpl) Play(playerKey string) {
 	}()
 }
 
-func (r *roomImpl) Close() error {
+func (r *Room) Close() error {
 	close(r.quit)
 	return nil
 }
 
-func (r *roomImpl) playQuestion(round int) error {
+func (r *Room) playQuestion(round int) error {
 	tries := 0
 	randomStreet, err := r.options.StreetList.GetRandomStreet(r.random)
 	for tries < 10 && err != nil {
@@ -326,7 +317,7 @@ func (r *roomImpl) playQuestion(round int) error {
 	return nil
 }
 
-func (r *roomImpl) AnswerQuestion(playerKey string, guess types.Coordinate) (int, error) {
+func (r *Room) AnswerQuestion(playerKey string, guess types.Coordinate) (int, error) {
 	_, ok := r.players[playerKey]
 	if !ok {
 		panic(fmt.Sprintf("player with key \"%s\" not found in this room", playerKey))
@@ -351,7 +342,7 @@ func (r *roomImpl) AnswerQuestion(playerKey string, guess types.Coordinate) (int
 	return question.points[playerKey], err
 }
 
-func (r *roomImpl) HasActiveQuestion(playerKey string) bool {
+func (r *Room) HasActiveQuestion(playerKey string) bool {
 	if r.currentQuestion == nil {
 		return false
 	}
@@ -359,19 +350,19 @@ func (r *roomImpl) HasActiveQuestion(playerKey string) bool {
 	return !ok
 }
 
-func (r *roomImpl) Question() (string, int) {
+func (r *Room) Question() (string, int) {
 	return r.currentQuestion.Street.Name, r.currentQuestion.number
 }
 
-func (r *roomImpl) CanBeAdvanced() bool {
+func (r *Room) CanBeAdvanced() bool {
 	return r.advanceGame != nil
 }
 
-func (r *roomImpl) AdvanceToNextQuestion() {
+func (r *Room) AdvanceToNextQuestion() {
 	r.advanceGame <- true
 }
 
-func (r *roomImpl) sendCountdowns(
+func (r *Room) sendCountdowns(
 	amount int, consumer func(Player) func(int, int), numberOfQuestion int,
 ) {
 	for i := 0; i < amount; i++ {
@@ -384,15 +375,15 @@ func (r *roomImpl) sendCountdowns(
 	}
 }
 
-func (r *roomImpl) Started() bool {
+func (r *Room) Started() bool {
 	return r.started
 }
 
-func (r *roomImpl) Finished() bool {
+func (r *Room) Finished() bool {
 	return r.finished
 }
 
-func (r *roomImpl) Creation() time.Time {
+func (r *Room) Creation() time.Time {
 	return r.creation
 }
 
@@ -423,4 +414,5 @@ type Notifier interface {
 	NotifyAnswerTimeCountdown(int)
 	NotifyQuestionResults(result QuestionResult)
 	NotifyGameEnded(reason string, result map[string]int)
+	NotifyPlayerKicked(string, string, string)
 }

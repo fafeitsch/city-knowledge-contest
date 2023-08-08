@@ -18,7 +18,7 @@ import (
 
 type roomContainer struct {
 	sync.RWMutex
-	openRooms map[string]contest.Room
+	openRooms map[string]*contest.Room
 	seed      string
 }
 
@@ -200,6 +200,37 @@ func (r *roomContainer) leaveGame(message json.RawMessage) (*rpcRequestContext, 
 	}, nil
 }
 
+type kickRequest struct {
+	PlayerKey    string `json:"playerKey"`
+	PlayerSecret string `json:"playerSecret"`
+	RoomKey      string `json:"roomKey"`
+	Target       string `json:"target"`
+}
+
+func (r *roomContainer) kickPlayer(message json.RawMessage) (*rpcRequestContext, error) {
+	request := parseMessage[kickRequest](message)
+	room, err := r.validateRoomAndPlayer(request.RoomKey, request.PlayerKey, request.PlayerSecret)
+	if err != nil {
+		return &rpcRequestContext{release: unlockRoom(room)}, err
+	}
+	return &rpcRequestContext{
+		process: func() (any, error) {
+			if _, ok := room.FindPlayer(request.Target); !ok {
+				return map[string]any{}, nil
+			}
+			kicked := room.Kick(request.Target, request.PlayerKey)
+			log.Printf(
+				"Player \"%s\"  kicked player \"%s\" from room \"%s\".",
+				request.PlayerKey,
+				request.Target,
+				request.RoomKey,
+			)
+			return kicked, nil
+		},
+		release: unlockRoom(room),
+	}, nil
+}
+
 type startGameRequest struct {
 	PlayerKey    string `json:"playerKey"`
 	PlayerSecret string `json:"playerSecret"`
@@ -227,7 +258,7 @@ func (r *roomContainer) startGame(message json.RawMessage) (*rpcRequestContext, 
 	}, nil
 }
 
-func (r *roomContainer) validateRoomAndPlayer(roomKey string, playerKey string, secret string) (contest.Room, error) {
+func (r *roomContainer) validateRoomAndPlayer(roomKey string, playerKey string, secret string) (*contest.Room, error) {
 	r.RLock()
 	room, ok := r.openRooms[roomKey]
 	r.RUnlock()
@@ -307,7 +338,7 @@ func parseMessage[K any](message json.RawMessage) K {
 	return request
 }
 
-func unlockRoom(room contest.Room) func() {
+func unlockRoom(room *contest.Room) func() {
 	return func() {
 		if room != nil {
 			room.Unlock()
@@ -329,7 +360,7 @@ func (r *roomContainer) cleanRooms() {
 	defer r.Unlock()
 	now := time.Now()
 	for key, room := range r.openRooms {
-		if room.Finished() || now.Sub(room.Creation()) > time.Second*24 {
+		if room.Finished() || now.Sub(room.Creation()) > time.Hour*24 {
 			log.Printf("cleaning room %s", key)
 			_ = r.openRooms[key].Close()
 			delete(r.openRooms, key)

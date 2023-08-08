@@ -178,6 +178,11 @@ func (w *websocketNotifier) NotifyPlayerAnswered(playerKey string, points int) {
 	w.write(websocketMessage{Topic: "playerAnswered", Payload: message})
 }
 
+func (w *websocketNotifier) NotifyPlayerKicked(playerKey string, name string, initiator string) {
+	message := map[string]any{"playerKey": playerKey, "name": name, "initiator": initiator}
+	w.write(websocketMessage{Topic: "playerKicked", Payload: message})
+}
+
 func convertRoomOptions(options contest.RoomOptions, playerKey string) roomUpdateMessage {
 	listName := ""
 	if options.StreetList != nil {

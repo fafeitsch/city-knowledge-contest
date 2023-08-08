@@ -37,3 +37,9 @@ h1 {
 .fw-bold {
     font-weight: 800;
 }
+
+.ellipsis {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

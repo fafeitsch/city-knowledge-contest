@@ -17,9 +17,9 @@
 </style>
 
 <script lang="ts">
-import store from '../store';
 import Button from '../components/Button.svelte';
 import rpc from '../rpc';
+import { store } from '../store';
 
 function leaveGame() {
   rpc.leaveGame().subscribe((data) => {

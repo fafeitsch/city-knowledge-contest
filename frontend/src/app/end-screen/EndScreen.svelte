@@ -1,9 +1,9 @@
 <script lang="ts">
 import Button from '../../components/Button.svelte';
-import store from '../../store';
 import Players from '../../components/Players.svelte';
 import CoverImage from '../../components/CoverImage.svelte';
 import Card from '../../components/Card.svelte';
+import { store } from '../../store';
 
 let players = store.get.players$;
 let room = store.get.room$;

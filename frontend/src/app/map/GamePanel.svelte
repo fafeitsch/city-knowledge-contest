@@ -1,6 +1,5 @@
 <script>
 import Players from '../../components/Players.svelte';
-import store from '../../store.ts';
 import { filter, map, merge, tap } from 'rxjs';
 import {
   subscribeToCountdown,
@@ -9,6 +8,7 @@ import {
   subscribeToRoomUpdated,
   subscribeToSuccessfullyJoined,
 } from '../../sockets.ts';
+import { store } from '../../store.ts';
 
 let players = store.get.players$;
 let room = store.get.room$;

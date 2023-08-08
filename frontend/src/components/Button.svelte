@@ -4,7 +4,7 @@
 button {
   background-color: $yellow-main;
   color: $blue-dark;
-  font-family: 'LilitaOne';
+  font-family: 'LilitaOne', sans-serif;
   padding: 16px 16px;
   text-align: center;
   font-size: large;
@@ -12,7 +12,6 @@ button {
   border: none;
   border-radius: 8px;
   transition: 0.3s;
-  width: 100%;
   &:hover {
     cursor: pointer;
     background-color: $blue-dark;

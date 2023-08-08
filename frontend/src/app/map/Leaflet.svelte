@@ -5,7 +5,7 @@ import { createEventDispatcher, onDestroy, onMount } from 'svelte';
 import { environment } from '../../environment';
 import img from '../../assets/images/pin.png';
 import { subscribeToQuestionFinished, subscribeToRoomUpdated, subscribeToSuccessfullyJoined } from '../../sockets';
-import store from '../../store';
+import { store } from '../../store';
 
 export let disabled = false;
 

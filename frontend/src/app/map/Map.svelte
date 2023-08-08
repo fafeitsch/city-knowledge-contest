@@ -47,23 +47,17 @@
   width: 30%;
   padding: 16px;
   font-size: xx-large;
-  font-family: 'LilitaOne';
+  font-family: 'LilitaOne', sans-serif;
   text-align: center;
 }
 </style>
 
 <script lang="ts">
-import store from '../../store';
 import PartyConfetti from '../../components/PartyConfetti.svelte';
 import Button from '../../components/Button.svelte';
 import Leaflet from './Leaflet.svelte';
 import { map, merge, of, Subject, switchMap, tap, zip } from 'rxjs';
-import {
-  subscribeToCountdown,
-  subscribeToQuestion,
-  subscribeToQuestionFinished,
-  subscribeToPlayerLeft,
-} from '../../sockets';
+import { subscribeToCountdown, subscribeToQuestion, subscribeToQuestionFinished } from '../../sockets';
 import rpc from '../../rpc';
 import GamePanel from './GamePanel.svelte';
 import LeaveButton from '../../components/LeaveButton.svelte';
@@ -78,7 +72,6 @@ let gameFinished = merge(
   question.pipe(map(() => undefined)),
   subscribeToQuestionFinished().pipe(map((data) => (data ? 'questionFinished' : undefined))),
 );
-subscribeToPlayerLeft();
 
 let guess = new Subject<[number, number] | undefined>();
 let lastResult = merge(

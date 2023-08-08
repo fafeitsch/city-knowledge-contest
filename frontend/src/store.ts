@@ -25,7 +25,7 @@ const state: State = {
 
 const state$ = new BehaviorSubject<State>(state);
 
-const store = {
+export const store = {
   get: {
     players$: state$.pipe(
       map((state) => state.players.sort((p1, p2) => p1.name.localeCompare(p2.name))),
@@ -108,5 +108,3 @@ const store = {
     },
   },
 };
-
-export default store;
