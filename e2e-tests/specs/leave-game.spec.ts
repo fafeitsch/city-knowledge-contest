@@ -1,29 +1,6 @@
 import {Browser, expect, test} from '@playwright/test';
-import {countDowns} from './utils';
+import {countDowns, createRoom} from './utils';
 import selectors from './selectors';
-
-async function createRoom(browser: Browser) {
-  const contextAlice = await browser.newContext();
-  const alice = await contextAlice.newPage();
-
-  const contextBob = await browser.newContext();
-  const bob = await contextBob.newPage();
-
-  await alice.goto('http://localhost:5173');
-  await alice.getByTestId(selectors.userNameInput).fill('Alice');
-  await alice.getByTestId(selectors.createRoomButton).click();
-
-  await expect(alice.getByTestId(selectors.roomLinkDisplay)).toHaveText(/^http:\/\/localhost:5173\/room/)
-  const link = await (alice.getByTestId(selectors.roomLinkDisplay).textContent())
-
-  await bob.goto(link)
-
-  await bob.getByTestId(selectors.userNameInput).fill('Bob');
-  await bob.getByTestId(selectors.joinRoomButton).click();
-
-  await bob.getByTestId(selectors.selectStreetList).selectOption({label: 'Würzburg Altstadt'})
-  return {alice, bob};
-}
 
 test('should be able to leave the game while in waiting room', async ({browser}) => {
   const {alice, bob} = await createRoom(browser);
@@ -41,7 +18,7 @@ test('it should be able to leave the game while in game mode', async ({browser})
   await countDowns([{page: alice}, {page: bob}])
 
   await alice.mouse.click(400,400)
-  await expect(alice.getByTestId(selectors.playerListEntry).nth(0)).toHaveText(/Alice 0 Punkte.*\d\d/)
+  await expect(alice.getByTestId(selectors.playerListEntry).nth(0)).toHaveText(/Alice 0 Punkte\n.*\d\d/)
 
   await bob.getByTestId(selectors.leaveGameButton).click()
 
@@ -54,7 +31,7 @@ test('it should be able to join a game late', async ({browser}) => {
   await bob.getByTestId(selectors.startGameButton).click()
   await countDowns([{page: alice}, {page: bob}])
   await alice.mouse.click(400,400)
-  await expect(alice.getByTestId(selectors.playerListEntry).nth(0)).toHaveText(/Alice 0 Punkte \+ \d\d/)
+  await expect(alice.getByTestId(selectors.playerListEntry).nth(0)).toHaveText(/Alice 0 Punkte\n.*\d\d/)
   await bob.mouse.click(400,400)
   await expect(bob.getByTestId(selectors.playerListEntry).nth(1)).toHaveText(/Bob \d\d Punkte/)
   await alice.getByTestId(selectors.proceedGameButton).click()

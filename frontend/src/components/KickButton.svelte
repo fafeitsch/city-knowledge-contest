@@ -35,4 +35,4 @@ function buttonClicked() {
 }
 </script>
 
-<button class="kick-button" on:click="{buttonClicked}">{caption}</button>
+<button class="kick-button" on:click="{buttonClicked}" data-testid="kick-player-button">{caption}</button>

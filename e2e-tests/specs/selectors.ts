@@ -14,5 +14,6 @@ export default {
   joinRoomButton: 'join-room-button',
   roomLinkDisplay: 'room-link-display',
   leaveGameButton: 'leave-game-button',
-  countDownOverlay: 'countdown-overlay'
+  countDownOverlay: 'countdown-overlay',
+  kickPlayerButton: 'kick-player-button',
 }

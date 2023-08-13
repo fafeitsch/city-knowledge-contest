@@ -27,13 +27,6 @@ a {
   font-weight: 600;
   text-decoration: underline;
 }
-
-.snackbar {
-  position: fixed;
-  bottom: 16px;
-  right: 16px;
-  z-index: 1000;
-}
 </style>
 
 <script lang="ts">
