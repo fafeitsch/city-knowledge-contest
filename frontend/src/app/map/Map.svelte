@@ -31,14 +31,15 @@
 }
 
 .container {
-  z-index: 999;
+  z-index: 800;
   position: absolute;
   bottom: 16px;
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 150px;
-  width: 100vw;
+  height: 80px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .card {
@@ -106,24 +107,22 @@ function onAnswerQuestion(event: CustomEvent) {
   <Leaflet on:mapClicked="{onAnswerQuestion}" disabled="{$lastResult !== undefined}" />
   <LeaveButton />
   {#if $question && !$gameFinished && $lastResult === undefined}
-    <div class="container">
-      <div class="card" data-testid="question-card">Suche den Ort {$question}</div>
-    </div>
+    <div class="card container" data-testid="question-card">Suche den Ort {$question}</div>
   {:else if $gameFinished || $lastResult !== undefined}
-    <div class="container">
-      <div class="card gap-3" data-testid="game-state-card">
-        {#if $lastResult > 0}
-          Richtig
-          <PartyConfetti />
-        {:else if $lastResult === 0}
-          Falsch
-        {:else if $lastResult === 'pending'}
-          Antwort wird geprüft …
-        {/if}
-        {#if $gameFinished}
-          <Button on:click="{() => advanceGame()}" title="Weiter" e2eTestId="proceed-game-button" />
-        {/if}
-      </div>
+    <div class="container card d-flex flex-column gap-3" data-testid="game-state-card">
+      {#if $lastResult > 0}
+        Richtig
+      {:else if $lastResult === 0}
+        Falsch
+      {:else if $lastResult === 'pending'}
+        Antwort wird geprüft …
+      {/if}
+      {#if $gameFinished}
+        <Button on:click="{() => advanceGame()}" title="Weiter" e2eTestId="proceed-game-button" />
+      {/if}
     </div>
   {/if}
 </div>
+{#if $lastResult > 0}
+  <PartyConfetti />
+{/if}

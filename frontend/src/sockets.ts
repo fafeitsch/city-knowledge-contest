@@ -1,4 +1,4 @@
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, last, map, Observable, take, takeLast, tap } from 'rxjs';
 import { environment } from './environment';
 import type { RoomConfiguration } from './rpc';
 import { store } from './store';
@@ -31,11 +31,21 @@ export function initWebSocket() {
       if (subscriptions[data.topic]) {
         subscriptions[data.topic].next(data.payload);
       }
-      console.log(data.topic);
       if (data.topic === 'successfullyJoined') {
         store.set.players(data.payload.players);
       } else if (data.topic === 'playerLeft' || data.topic === 'playerKicked') {
         store.set.removePlayer(data.payload);
+        store.get.room$
+          .pipe(
+            take(1),
+            map((room) => room.playerKey),
+          )
+          .subscribe((playerKey) => {
+            if (data.payload.playerKey === playerKey) {
+              (window as Window).location = window.location.protocol + '//' + window.location.host;
+              store.set.resetGame();
+            }
+          });
       } else if (data.topic === 'playerJoined') {
         store.set.addPlayer(data.payload);
       } else if (data.topic === 'questionFinished') {

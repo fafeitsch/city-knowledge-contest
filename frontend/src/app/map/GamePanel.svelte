@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 import Players from '../../components/Players.svelte';
 import { filter, map, merge, tap } from 'rxjs';
 import {
@@ -9,9 +9,10 @@ import {
   subscribeToSuccessfullyJoined,
 } from '../../sockets.ts';
 import { store } from '../../store.ts';
+import rpc from '../../rpc.js';
 
-let players = store.get.players$;
-let room = store.get.room$;
+let players = store.get.players$.pipe(filter((players) => !!players));
+let room = store.get.room$.pipe(filter((room) => !!room));
 let currentQuestion = merge(
   subscribeToCountdown().pipe(
     filter((countdown) => !!countdown),
@@ -36,6 +37,10 @@ let totalQuestions = merge(
     map((result) => result),
   ),
 ).pipe(map((options) => options.numberOfQuestions));
+
+function kickPlayer({ detail }: CustomEvent) {
+  rpc.kickPlayer(detail).subscribe();
+}
 </script>
 
 <div class="d-flex flex-column">
@@ -44,5 +49,10 @@ let totalQuestions = merge(
       >Frage {$currentQuestion} von {$totalQuestions}</span
     >
   {/if}
-  <Players players="{$players}" playerKey="{$room.playerKey}" />
+  <Players
+    players="{$players}"
+    playerKey="{$room.playerKey}"
+    enableKick="{true}"
+    on:kickPlayer="{(event) => kickPlayer(event)}"
+  />
 </div>

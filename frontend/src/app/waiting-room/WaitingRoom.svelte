@@ -19,7 +19,7 @@
 import { filter, map, merge, Observable } from 'rxjs';
 import AvailableStreetLists from './AvailableStreetLists.svelte';
 import Button from '../../components/Button.svelte';
-import { type Player, store } from '../../store';
+import { store } from '../../store';
 import rpc, { type RoomConfiguration } from '../../rpc';
 import CopyIcon from './CopyIcon.svelte';
 import Players from '../../components/Players.svelte';
@@ -81,7 +81,6 @@ function startGame() {
 }
 
 function kickPlayer({ detail }: CustomEvent) {
-  console.log('kicking player', detail);
   rpc.kickPlayer(detail).subscribe();
 }
 </script>

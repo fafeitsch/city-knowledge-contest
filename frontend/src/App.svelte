@@ -27,6 +27,13 @@ a {
   font-weight: 600;
   text-decoration: underline;
 }
+
+.snackbar {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  z-index: 1000;
+}
 </style>
 
 <script lang="ts">
@@ -46,6 +53,8 @@ import {
 } from './sockets';
 import Legal from './components/Legal.svelte';
 import rpc from './rpc';
+import Card from './components/Card.svelte';
+import { store } from './store';
 
 let showDataProtection = false;
 let showImprint = false;

@@ -41,7 +41,7 @@ test('it should be able to leave the game while in game mode', async ({browser})
   await countDowns([{page: alice}, {page: bob}])
 
   await alice.mouse.click(400,400)
-  await expect(alice.getByTestId(selectors.playerListEntry).nth(0)).toHaveText(/Alice 0 Punkte \+ \d\d/)
+  await expect(alice.getByTestId(selectors.playerListEntry).nth(0)).toHaveText(/Alice 0 Punkte.*\d\d/)
 
   await bob.getByTestId(selectors.leaveGameButton).click()
 

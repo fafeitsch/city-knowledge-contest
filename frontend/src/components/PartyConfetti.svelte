@@ -9,6 +9,7 @@
   justify-content: center;
   overflow: hidden;
   pointer-events: none;
+  z-index: 700;
 }
 </style>
 
