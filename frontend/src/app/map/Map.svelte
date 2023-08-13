@@ -56,7 +56,7 @@
 import PartyConfetti from '../../components/PartyConfetti.svelte';
 import Button from '../../components/Button.svelte';
 import Leaflet from './Leaflet.svelte';
-import { map, merge, of, Subject, switchMap, tap, zip } from 'rxjs';
+import { delay, map, merge, Observable, of, startWith, Subject, switchMap, tap, zip } from 'rxjs';
 import { subscribeToCountdown, subscribeToQuestion, subscribeToQuestionFinished } from '../../sockets';
 import rpc from '../../rpc';
 import GamePanel from './GamePanel.svelte';
@@ -74,13 +74,13 @@ let gameFinished = merge(
 );
 
 let guess = new Subject<[number, number] | undefined>();
-let lastResult = merge(
+let lastResult: Observable<number | undefined | 'pending'> = merge(
   guess.pipe(
     switchMap((guess) => {
       if (!guess) {
         return of(undefined);
       }
-      return rpc.answerQuestion(guess);
+      return rpc.answerQuestion(guess).pipe(startWith('pending'));
     }),
   ),
   question.pipe(map(() => undefined)),
@@ -111,15 +111,15 @@ function onAnswerQuestion(event: CustomEvent) {
     </div>
   {:else if $gameFinished || $lastResult !== undefined}
     <div class="container">
-      <div class="card" data-testid="game-state-card">
-        <div class="mb-3">
-          {#if $lastResult}
-            <div>Richtig</div>
-            <PartyConfetti />
-          {:else}
-            <div>Falsch</div>
-          {/if}
-        </div>
+      <div class="card gap-3" data-testid="game-state-card">
+        {#if $lastResult > 0}
+          Richtig
+          <PartyConfetti />
+        {:else if $lastResult === 0}
+          Falsch
+        {:else if $lastResult === 'pending'}
+          Antwort wird geprüft …
+        {/if}
         {#if $gameFinished}
           <Button on:click="{() => advanceGame()}" title="Weiter" e2eTestId="proceed-game-button" />
         {/if}
